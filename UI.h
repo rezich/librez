@@ -51,7 +51,7 @@ typedef enum {
     CD_LEFT
 } Cardinal_Direction;
 
-void UI_Navigate() {
+void _UI_navigate() {
     Point direction;
     if (input_get(IA_UI_UP   )) direction = Point( 0, -1); else
     if (input_get(IA_UI_DOWN )) direction = Point( 0,  1); else 
@@ -96,8 +96,8 @@ void UI_Navigate() {
     uiid_hot = to;
 }
 
-void UI_Reset() {
-    UI_Navigate();
+void UI_reset() {
+    _UI_navigate();
     if (input_get(IA_UI_ACTION)) {
         ui_hot_is_active = true;
     }

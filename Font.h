@@ -20,7 +20,7 @@ typedef struct {
     int proportional_space_width;
 } Typesetting;
 const Typesetting DEFAULT_TYPESETTING = {
-    .glyph_size = {0,1},
+    .glyph_size = {0,0},
     .glyph_spacing = 1,
     .glyph_shiver = 0,
     .line_spacing = 1,
@@ -54,20 +54,20 @@ typedef struct {
 #define MAX_GLYPHS_PER_FONT BASIC_ASCII_COUNT-FONT_ASCII_OFFSET
 typedef Glyph Font[MAX_GLYPHS_PER_FONT];
 
-const Point GLYPH_SIZE_MINIMUM = { 7, 7 };
+const Point GLYPH_SIZE_MINIMUM = { 9, 9 };
 Point stroke_point(Stroke_Point sp, Point glyph_scale) {
-    Point unit = {
+    const Point unit = Point(
         (glyph_scale.x - 1) / 2,
         (glyph_scale.y - 1) / 2
-    };
-    Point half_unit = {
+    );
+    const Point half_unit = Point(
         unit.x / 2,
         unit.y / 2
-    };
-    Point p = {
+    );
+    Point p = Point(
         unit.x,
         unit.y
-    };
+    );
     switch (sp.x) {
     case SP_NEGATIVE_ONE:  p.x += -unit.x;      break;
     case SP_NEGATIVE_HALF: p.x += -half_unit.x; break;

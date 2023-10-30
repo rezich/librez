@@ -1,18 +1,18 @@
 #pragma once
 
-#define TOTAL_MEMORY 1024 * 1024 * 1
-char* total_memory;
+#define MEM_ARENA_CHUNK_SIZE 1024 * 1024 * 1
+char* mem_arena_chunk;
 
 Mem_Arena mem_arena = 0;
 
 size_t mem_end[MEM_ARENA_COUNT] = { 0 };
 
-void mem_init() {
-    total_memory = pd->system->realloc(NULL, TOTAL_MEMORY);
-    for (int i = 0; i < TOTAL_MEMORY; ++i) total_memory[i] = 0;
+void _mem_init() {
+    mem_arena_chunk = pd->system->realloc(NULL, MEM_ARENA_CHUNK_SIZE);
+    for (int i = 0; i < MEM_ARENA_CHUNK_SIZE; ++i) mem_arena_chunk[i] = 0;
 }
 inline void* mem_alloc(size_t bytes) {
-    void* ptr = total_memory + mem_end[mem_arena];
+    void* ptr = mem_arena_chunk + mem_end[mem_arena];
     mem_end[mem_arena] += bytes;
     return ptr;
 }

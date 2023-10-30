@@ -20,17 +20,19 @@ PlaydateAPI* pd = NULL;
 #include "Font.h"
 #include "Renderer.h"
 #include "Input.h"
+#ifdef USING_UI
 #include "UI.h"
+#endif
 
 #ifdef USING_AUTOSAVE
 static void init(bool autosave_loaded);
 #else
 static void init();
 #endif
-static void simulate(float dt);
-static int  update(void* userdata);
+static int  update(float dt, void* userdata);
 
 #ifdef USING_SUSPEND_RESUME
+    static void simulate(float dt);
     #ifndef SIMULATION_REFRESH_RATE
         #define SIMULATION_REFRESH_RATE 30.f
     #endif
@@ -139,9 +141,11 @@ static int _update(void* userdata) {
         last_second_simulated = current_second;
     }
 #endif
-    input_update();
-    int update_display = update(userdata);
-#ifdef USING_AUTOSAVE
+    _input_update();
+    float dt = pd->system->getElapsedTime();
+    pd->system->resetElapsedTime();
+    int update_display = update(dt, userdata);
+#if defined(USING_AUTOSAVE) && defined(AUTOSAVE_PERIOD)
     {
         unsigned int current_second = pd->system->getSecondsSinceEpoch(NULL);
         if (current_second - last_second_autosaved >= AUTOSAVE_PERIOD) {
@@ -173,7 +177,7 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
 #endif
         pd->system->setUpdateCallback(_update, NULL);
         srand(pd->system->getSecondsSinceEpoch(NULL));
-        mem_init();
+        _mem_init();
 #ifdef USING_AUTOSAVE
         init(autoload());
 #else
