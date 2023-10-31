@@ -84,6 +84,9 @@ When enabled, the `static void init()` function declaration is replaced with `st
 
 Additionally, this feature declares `autosave()` and `autoload()` functions. If `USING_SUSPEND_RESUME` and `AUTOSAVE_STRUCT` are defined, then these are filled out for you -- otherwise, you must implement them on your own.
 
+#### `AUTOSAVE_FILENAME`
+Defines the filename for the autosave file. `autosave` by default if not specified.
+
 #### `AUTOSAVE_STRUCT`
 Defines the struct that is automatically saved to disk when autosaving occurs.
 
@@ -103,13 +106,17 @@ To make use of this system, you must define the following functions:
 - `static void simulate(float dt)` The simulation function.
 - `static void suspend()` Called when the game is suspended. **Automatically defined if `USING_AUTOSAVE` is also enabled.**
 - `static void resume_begin(unsigned int seconds)` Called when the game is resumed -- `seconds` is how many seconds are needed to simulate until the simulation is "caught up".
+- `static int  resume_update(unsigned int frames_left_to_simulate, unsigned int total_frames_to_simulate)` Called during the catch-up process. Use the parameters to display a loading bar or something. Return value is just like the normal `update()` function -- whether or not to update the display.
 - `static void resume_end()` Called once the simulation is "caught up".
 
-#### `SIMULATION_REFRESH_RATE`
-Must be set to make use of the suspend/resume functionality. This is the rate that `simulate()` will be run to "catch up" the simulation to the current time when the game is resumed.
+#### `SUSPEND_RESUME_SIMULATION_REFRESH_RATE`
+This is the "framerate" that `simulate()` will be run at when "catching up" the simulation to the current time when the game is resumed. Must be a `float`. Defaults to `30.f`.
 
+#### `SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS`
+The interval at which the display is updated while simulating the suspend/resume, in milliseconds. Must be less than 10000, or else the hardware will think your game has hung and will terminate it. Must be an `unsigned int`. Defaults to `((unsigned int)(1.f / SUSPEND_RESUME_SIMULATION_REFRESH_RATE * 1000.f))`.
 
-***`USING_AUTOSAVE` and `USING_SUSPEND_RESUME` are both experimental and not yet completely fleshed out! Right now, if your game takes too long to "catch the simulation up", it will crash on real hardware. This will be addressed in the future.***
+#### `SUSPEND_RESUME_SIMULATE_SECONDS`
+Used for testing out long suspend/resume simulation catch-ups. Causes the game to pretend that the given number of seconds has passed since the last time the game was run, when the game launches.
 
 
 

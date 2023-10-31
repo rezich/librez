@@ -13,7 +13,6 @@
 #include <float.h>
 #include <math.h>
 
-
 PlaydateAPI* pd = NULL;
 #include "Memory.h"
 #include "Util.h"
@@ -34,13 +33,18 @@ static int  update(float dt, void* userdata);
 
 #ifdef USING_SUSPEND_RESUME
     static void simulate(float dt);
-    #ifndef SIMULATION_REFRESH_RATE
-        #define SIMULATION_REFRESH_RATE 30.f
+    #ifndef SUSPEND_RESUME_SIMULATION_REFRESH_RATE
+        #define SUSPEND_RESUME_SIMULATION_REFRESH_RATE 30.f
     #endif
-    static bool is_resuming = false;
+    #ifndef SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS
+        #define SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS ((unsigned int)(1.f / SUSPEND_RESUME_SIMULATION_REFRESH_RATE * 1000.f))
+    #endif
     static unsigned int last_second_simulated = 0;
+    static unsigned int frames_left_to_simulate = 0;
+    static unsigned int total_frames_to_simulate = 0;
     static void suspend();
     static void resume_begin(unsigned int seconds);
+    static int  resume_update(unsigned int frames_left_to_simulate, unsigned int total_frames_to_simulate);
     static void resume_end();
 #endif
 #ifdef USING_AUTOSAVE
@@ -51,7 +55,7 @@ static int  update(float dt, void* userdata);
     static void autosave();
     static bool autoload();
 #endif
-#if defined(USING_SUSPEND_RESUME) && defined(USING_AUTOSAVE) && defined(AUTOSAVE_STRUCT)
+#if defined(USING_SUSPEND_RESUME) && defined(USING_AUTOSAVE) && defined(AUTOSAVE_DATA)
     static void autosave() {
         SDFile* file = pd->file->open(AUTOSAVE_FILENAME, kFileWrite);
         if (!file) {
@@ -62,7 +66,7 @@ static int  update(float dt, void* userdata);
             pd->system->error("Failed to write last_second_simulated to autosave file!");
             assert(false);
         }
-        if (pd->file->write(file, &AUTOSAVE_STRUCT, sizeof(AUTOSAVE_STRUCT)) == -1) {
+        if (pd->file->write(file, &AUTOSAVE_DATA, sizeof(AUTOSAVE_DATA)) == -1) {
             pd->system->error("Failed to write save data to autosave file!");
             assert(false);
         }
@@ -78,8 +82,8 @@ static int  update(float dt, void* userdata);
 #ifdef AUTOSAVE_RESET
         if (pd->file->unlink(AUTOSAVE_FILENAME, false) == -1) pd->system->logToConsole("Could not delete save file (probably because it doesn't exist.");
 #ifdef USING_SUSPEND_RESUME
-#ifdef SUSPEND_RESUME_SIMULATE_RUNNING_FOR_A_LONG_TIME
-        last_second_simulated = pd->system->getSecondsSinceEpoch(NULL) - 1000000;
+#ifdef SUSPEND_RESUME_SIMULATE_SECONDS
+        last_second_simulated = pd->system->getSecondsSinceEpoch(NULL) - SUSPEND_RESUME_SIMULATE_SECONDS;
 #else
         last_second_simulated = pd->system->getSecondsSinceEpoch(NULL);
 #endif
@@ -98,7 +102,7 @@ static int  update(float dt, void* userdata);
             pd->system->error("Failed to read last_second_simulated from autosave file!");
             assert(false);
         }
-        if (pd->file->read(file, &state, sizeof(State)) == -1) {
+        if (pd->file->read(file, &state, sizeof(AUTOSAVE_DATA)) == -1) {
             pd->system->error("Failed to read save data from autosave file!");
             assert(false);
         }
@@ -117,45 +121,62 @@ LCDFont* fpsfont = NULL;
 #endif
 
 static int _update(void* userdata) {
+    bool do_update = true;
+    int update_display = 0;
 #ifdef USING_CUSTOM_RENDERER
     _begin_rendering();
 #endif
 #ifdef USING_SUSPEND_RESUME
     {
-        unsigned int current_second = pd->system->getSecondsSinceEpoch(NULL);
-        unsigned int seconds_to_simulate = current_second - last_second_simulated;
-        if (seconds_to_simulate > 1) {
-            if (is_resuming) {
-                unsigned int frames_to_simulate = (unsigned int)((float)seconds_to_simulate * SIMULATION_REFRESH_RATE);
-                pd->system->logToConsole("Simulating %d frames to catch up %d seconds!", frames_to_simulate, seconds_to_simulate);
-                float dt = 1.f / SIMULATION_REFRESH_RATE;
-                for (unsigned int i = 0; i < frames_to_simulate; ++i) simulate(dt);
+        if (frames_left_to_simulate > 0) {
+            unsigned int millisecond_started;
+            pd->system->getSecondsSinceEpoch(&millisecond_started);
+            float dt = 1.f / SUSPEND_RESUME_SIMULATION_REFRESH_RATE;
+            for (; frames_left_to_simulate > 0; --frames_left_to_simulate) {
+                simulate(dt);
+                unsigned int current_millisecond;
+                pd->system->getSecondsSinceEpoch(&current_millisecond);
+                unsigned int milliseconds_simulated = current_millisecond - millisecond_started;
+                if (milliseconds_simulated >= SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS) {
+                    break;
+                }
+            }
+            if (frames_left_to_simulate == 0) {
+                last_second_simulated = pd->system->getSecondsSinceEpoch(NULL);
                 resume_end();
-                is_resuming = false;
             }
             else {
-                is_resuming = true;
+                update_display = resume_update(frames_left_to_simulate, total_frames_to_simulate);
+                do_update = false;
+            }
+        }
+        else {
+            unsigned int current_second = pd->system->getSecondsSinceEpoch(NULL);
+            unsigned int seconds_to_simulate = current_second - last_second_simulated;
+            if (seconds_to_simulate > 1) {
+                total_frames_to_simulate = (unsigned int)((float)seconds_to_simulate * SUSPEND_RESUME_SIMULATION_REFRESH_RATE);
+                frames_left_to_simulate = total_frames_to_simulate;
                 resume_begin(seconds_to_simulate);
                 return 1;
             }
+            else last_second_simulated = current_second;
         }
-        last_second_simulated = current_second;
     }
 #endif
-    _input_update();
-    float dt = pd->system->getElapsedTime();
-    pd->system->resetElapsedTime();
-    int update_display = update(dt, userdata);
+    if (do_update) {
+        _input_update();
+        float dt = pd->system->getElapsedTime();
+        pd->system->resetElapsedTime();
+        update_display = update(dt, userdata);
 #if defined(USING_AUTOSAVE) && defined(AUTOSAVE_PERIOD)
-    {
         unsigned int current_second = pd->system->getSecondsSinceEpoch(NULL);
         if (current_second - last_second_autosaved >= AUTOSAVE_PERIOD) {
             pd->system->logToConsole("Autosaving...");
             autosave();
             last_second_autosaved = current_second;
         }
-    }
 #endif
+    }
 #ifdef USING_FPS_COUNTER
     pd->graphics->setFont(fpsfont);
     pd->system->drawFPS(0, 0);

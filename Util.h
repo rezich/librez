@@ -41,7 +41,6 @@ void set_black(LCDPattern* pattern) {
 void set_white(LCDPattern* pattern) {
     memcpy(*pattern, PATTERN_WHITE, sizeof(PATTERN_WHITE));
 }
-
 void set_alpha(LCDPattern* pattern, float alpha) {
     if (alpha == 1.f) { //TODO: fix?!
         uint8_t* dest = (*pattern) + 8 * sizeof(uint8_t);
