@@ -211,6 +211,9 @@ Wrapper for `pd->graphics->clearClipRect()`. Necessary for custom renderer.
 ### `void target_push(LCDBitmap* target)`
 Wrapper for `pd->graphics->pushContext()`. Necessary for custom renderer.
 
+### `void target_push_debug()`
+Sort of a wrapper for `pd->graphics->pushContext(pd->graphics->getDebugBitmap())`, but it automatically dummies out when building for the device, to avoid the null pointer dereference caused by invoking `pd->graphics->getDebugBitmap()` (which is `NULL` when compiled for the device).
+
 ### `void target_pop()`
 Wrapper for `pd->graphics->popContext()`. Necessary for custom renderer.
 
@@ -231,6 +234,18 @@ Wrapper for `pd->graphics->fillTriangle()`. ***Currently unavailable when custom
 
 ### `void draw_triangle_outline(Point a, Point b, Point c, LCDColor color)`
 Draw a one-pixel-outlined triangle.
+
+### `void draw_ellipse(Rect r, float angle_start, float angle_end, LCDColor color)`
+Wrapper for `pd->grpahics->fillEllipse()`.
+
+### `void draw_ellipse_outline(Rect r, float angle_start, float angle_end, LCDColor color)`
+Wrapper for `pd->graphics->drawEllipse()`.
+
+### `void draw_circle(Point center, int diameter, LCDColor color)`
+Draw a circle. Use an odd `diameter` to make sure it's centered on `center`.
+
+### `void draw_circle_outline(Point center, int diameter, LCDColor color)`
+Draw a one-pixel-outlined circle. Use an odd `diameter` to make sure it's centered on `center`.
 
 ### `void draw_text(Point top_left, const char* text, const Typesetting* typesetting)`
 Draw a string of text using vector text rendering.

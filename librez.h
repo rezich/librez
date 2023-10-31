@@ -13,6 +13,7 @@
 #include <float.h>
 #include <math.h>
 
+
 PlaydateAPI* pd = NULL;
 #include "Memory.h"
 #include "Util.h"
@@ -111,8 +112,8 @@ static int  update(float dt, void* userdata);
 #endif
 
 #ifdef USING_FPS_COUNTER
-const char* fontpath = "/System/Fonts/Asheville-Sans-14-Bold.pft";
-LCDFont* font = NULL;
+const char* fpsfontpath = "/System/Fonts/Asheville-Sans-14-Bold.pft";
+LCDFont* fpsfont = NULL;
 #endif
 
 static int _update(void* userdata) {
@@ -156,7 +157,7 @@ static int _update(void* userdata) {
     }
 #endif
 #ifdef USING_FPS_COUNTER
-    pd->graphics->setFont(font);
+    pd->graphics->setFont(fpsfont);
     pd->system->drawFPS(0, 0);
 #endif
     return update_display;
@@ -172,8 +173,8 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
         pd = playdate;
 #ifdef USING_FPS_COUNTER
         const char* err;
-        font = pd->graphics->loadFont(fontpath, &err);
-        if (font == NULL) pd->system->error("%s:%i Couldn't load font %s: %s", __FILE__, __LINE__, fontpath, err);
+        fpsfont = pd->graphics->loadFont(fpsfontpath, &err);
+        if (!fpsfont) pd->system->error("%s:%i Couldn't load font %s: %s", __FILE__, __LINE__, fpsfontpath, err);
 #endif
         pd->system->setUpdateCallback(_update, NULL);
         srand(pd->system->getSecondsSinceEpoch(NULL));

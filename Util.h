@@ -86,12 +86,11 @@ HASH hash_combine(HASH a, HASH b) {
     return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
 }
 HASH hash_pointer(const void* ptr) {
-#ifdef _WINDLL
+#ifdef TARGET_SIMULATOR
     const int high = (int)((uintptr_t)ptr >> 32);
     const int low  = (int)((uintptr_t)ptr & 0xFFFFFFFF);
     return hash_combine(hash_int(high), hash_int(low));
-#endif
-#ifndef _WINDLL
+#else
     return hash_int((int)ptr);
 #endif
 }
