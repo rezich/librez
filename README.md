@@ -82,13 +82,13 @@ Provides an autosave system for games that are meant to be played in short burst
 
 When enabled, the `static void init()` function declaration is replaced with `static void init(bool autosave_loaded)`, where `autosave_loaded` is passed as `true` if the system found and successfully loaded an autosave, or `false` if it did not (i.e. if this is the first time the game is run).
 
-Additionally, this feature declares `autosave()` and `autoload()` functions. If `USING_SUSPEND_RESUME` and `AUTOSAVE_STRUCT` are defined, then these are filled out for you -- otherwise, you must implement them on your own.
+Additionally, this feature declares `autosave()` and `autoload()` functions. If `USING_SUSPEND_RESUME` and `AUTOSAVE_DATA` are defined, then these are filled out for you -- otherwise, you must implement them on your own.
 
 #### `AUTOSAVE_FILENAME`
 Defines the filename for the autosave file. `autosave` by default if not specified.
 
-#### `AUTOSAVE_STRUCT`
-Defines the struct that is automatically saved to disk when autosaving occurs.
+#### `AUTOSAVE_DATA`
+Defines the variable that is automatically saved to disk when autosaving occurs.
 
 #### `AUTOSAVE_PERIOD`
 Defines the period, in seconds, between automatic saves. If left undefined, then automatic saving is not automatic, and must be handled by the user.

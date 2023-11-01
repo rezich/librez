@@ -39,9 +39,12 @@ static int  update(float dt, void* userdata);
     #ifndef SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS
         #define SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS ((unsigned int)(1.f / SUSPEND_RESUME_SIMULATION_REFRESH_RATE * 1000.f))
     #endif
-    static unsigned int last_second_simulated = 0;
-    static unsigned int frames_left_to_simulate = 0;
-    static unsigned int total_frames_to_simulate = 0;
+    static struct {
+        unsigned int last_second_simulated_or_queued;
+        unsigned int frames_left_to_simulate;
+        unsigned int total_frames_to_simulate;
+    } suspend_resume;
+    static bool _is_resuming = false;
     static void suspend();
     static void resume_begin(unsigned int seconds);
     static int  resume_update(unsigned int frames_left_to_simulate, unsigned int total_frames_to_simulate);
@@ -49,6 +52,7 @@ static int  update(float dt, void* userdata);
 #endif
 #ifdef USING_AUTOSAVE
     static unsigned int last_second_autosaved = 0;
+    static bool _autosave_disabled = false;
 #ifndef AUTOSAVE_FILENAME
 #define AUTOSAVE_FILENAME "autosave"
 #endif
@@ -57,13 +61,14 @@ static int  update(float dt, void* userdata);
 #endif
 #if defined(USING_SUSPEND_RESUME) && defined(USING_AUTOSAVE) && defined(AUTOSAVE_DATA)
     static void autosave() {
+        if (_autosave_disabled) return;
         SDFile* file = pd->file->open(AUTOSAVE_FILENAME, kFileWrite);
         if (!file) {
             pd->system->error("Could not open autosave file to write!");
             assert(false);
         }
-        if (pd->file->write(file, &last_second_simulated, sizeof(last_second_simulated)) == -1) {
-            pd->system->error("Failed to write last_second_simulated to autosave file!");
+        if (pd->file->write(file, &suspend_resume, sizeof(suspend_resume)) == -1) {
+            pd->system->error("Failed to write suspend_resume to autosave file!");
             assert(false);
         }
         if (pd->file->write(file, &AUTOSAVE_DATA, sizeof(AUTOSAVE_DATA)) == -1) {
@@ -83,9 +88,9 @@ static int  update(float dt, void* userdata);
         if (pd->file->unlink(AUTOSAVE_FILENAME, false) == -1) pd->system->logToConsole("Could not delete save file (probably because it doesn't exist.");
 #ifdef USING_SUSPEND_RESUME
 #ifdef SUSPEND_RESUME_SIMULATE_SECONDS
-        last_second_simulated = pd->system->getSecondsSinceEpoch(NULL) - SUSPEND_RESUME_SIMULATE_SECONDS;
+        suspend_resume.last_second_simulated_or_queued = pd->system->getSecondsSinceEpoch(NULL) - SUSPEND_RESUME_SIMULATE_SECONDS;
 #else
-        last_second_simulated = pd->system->getSecondsSinceEpoch(NULL);
+        suspend_resume.last_second_simulated_or_queued = pd->system->getSecondsSinceEpoch(NULL);
 #endif
 #endif
         return false;
@@ -94,12 +99,12 @@ static int  update(float dt, void* userdata);
         if (!file) {
             pd->system->logToConsole("Could not open autosave file to read! (probably no file exists)");
 #ifdef USING_SUSPEND_RESUME
-            last_second_simulated = pd->system->getSecondsSinceEpoch(NULL);
+            suspend_resume.last_second_simulated_or_queued = pd->system->getSecondsSinceEpoch(NULL);
 #endif
             return false;
         }
-        if (pd->file->read(file, &last_second_simulated, sizeof(last_second_simulated)) == -1) {
-            pd->system->error("Failed to read last_second_simulated from autosave file!");
+        if (pd->file->read(file, &suspend_resume, sizeof(suspend_resume)) == -1) {
+            pd->system->error("Failed to read last_second_simulated_or_queued from autosave file!");
             assert(false);
         }
         if (pd->file->read(file, &state, sizeof(AUTOSAVE_DATA)) == -1) {
@@ -128,38 +133,36 @@ static int _update(void* userdata) {
 #endif
 #ifdef USING_SUSPEND_RESUME
     {
-        if (frames_left_to_simulate > 0) {
+        const unsigned int current_second = pd->system->getSecondsSinceEpoch(NULL);
+        const unsigned int seconds_to_simulate = current_second - suspend_resume.last_second_simulated_or_queued;
+        if (seconds_to_simulate > 1) {
+            const unsigned int more_frames = (unsigned int)((float)seconds_to_simulate * SUSPEND_RESUME_SIMULATION_REFRESH_RATE);
+            suspend_resume.total_frames_to_simulate += more_frames;
+            suspend_resume.frames_left_to_simulate  += more_frames;
+            if (!_is_resuming) resume_begin(seconds_to_simulate);
+        }
+        suspend_resume.last_second_simulated_or_queued = current_second;
+
+        if (suspend_resume.frames_left_to_simulate > 0) {
             unsigned int millisecond_started;
             pd->system->getSecondsSinceEpoch(&millisecond_started);
-            float dt = 1.f / SUSPEND_RESUME_SIMULATION_REFRESH_RATE;
-            for (; frames_left_to_simulate > 0; --frames_left_to_simulate) {
+            const float dt = 1.f / SUSPEND_RESUME_SIMULATION_REFRESH_RATE;
+            for (; suspend_resume.frames_left_to_simulate > 0; --suspend_resume.frames_left_to_simulate) {
                 simulate(dt);
                 unsigned int current_millisecond;
                 pd->system->getSecondsSinceEpoch(&current_millisecond);
                 unsigned int milliseconds_simulated = current_millisecond - millisecond_started;
-                if (milliseconds_simulated >= SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS) {
-                    break;
-                }
+                if (milliseconds_simulated >= SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS) break;
             }
-            if (frames_left_to_simulate == 0) {
-                last_second_simulated = pd->system->getSecondsSinceEpoch(NULL);
+            if (suspend_resume.frames_left_to_simulate == 0) {
+                suspend_resume.total_frames_to_simulate = 0;
+                _is_resuming = false;
                 resume_end();
             }
             else {
-                update_display = resume_update(frames_left_to_simulate, total_frames_to_simulate);
+                update_display = resume_update(suspend_resume.frames_left_to_simulate, suspend_resume.total_frames_to_simulate);
                 do_update = false;
             }
-        }
-        else {
-            unsigned int current_second = pd->system->getSecondsSinceEpoch(NULL);
-            unsigned int seconds_to_simulate = current_second - last_second_simulated;
-            if (seconds_to_simulate > 1) {
-                total_frames_to_simulate = (unsigned int)((float)seconds_to_simulate * SUSPEND_RESUME_SIMULATION_REFRESH_RATE);
-                frames_left_to_simulate = total_frames_to_simulate;
-                resume_begin(seconds_to_simulate);
-                return 1;
-            }
-            else last_second_simulated = current_second;
         }
     }
 #endif
@@ -200,6 +203,11 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
         pd->system->setUpdateCallback(_update, NULL);
         srand(pd->system->getSecondsSinceEpoch(NULL));
         _mem_init();
+#ifdef USING_SUSPEND_RESUME
+        suspend_resume.last_second_simulated_or_queued    = 0;
+        suspend_resume.frames_left_to_simulate  = 0;
+        suspend_resume.total_frames_to_simulate = 0;
+#endif
 #ifdef USING_AUTOSAVE
         init(autoload());
 #else
