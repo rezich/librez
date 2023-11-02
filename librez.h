@@ -45,9 +45,18 @@ static int  update(float dt, void* userdata);
         unsigned int total_frames_to_simulate;
     } suspend_resume;
     static bool _is_resuming = false;
+    #ifndef SUSPEND_RESUME_ETA_BUFFER_SIZE
+        #define SUSPEND_RESUME_ETA_BUFFER_SIZE 20
+    #endif
+    static struct {
+        unsigned int ms;
+        unsigned int frames;
+    } _suspend_resume_eta_buffer[SUSPEND_RESUME_ETA_BUFFER_SIZE];
+    static size_t _suspend_resume_eta_buffer_count   = 0;
+    static size_t _suspend_resume_eta_buffer_pointer = 0;
     static void suspend();
     static void resume_begin(unsigned int seconds);
-    static int  resume_update(unsigned int frames_left_to_simulate, unsigned int total_frames_to_simulate);
+    static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, unsigned int estimated_milliseconds_remaining);
     static void resume_end();
 #endif
 #ifdef USING_AUTOSAVE
@@ -137,6 +146,7 @@ static int _update(void* userdata) {
         const unsigned int seconds_to_simulate = current_second - suspend_resume.last_second_simulated_or_queued;
         if (seconds_to_simulate > 1) {
             const unsigned int more_frames = (unsigned int)((float)seconds_to_simulate * SUSPEND_RESUME_SIMULATION_REFRESH_RATE);
+            pd->system->logToConsole("Adding more frames: %u", more_frames);
             suspend_resume.total_frames_to_simulate += more_frames;
             suspend_resume.frames_left_to_simulate  += more_frames;
             if (!_is_resuming) resume_begin(seconds_to_simulate);
@@ -144,15 +154,25 @@ static int _update(void* userdata) {
         suspend_resume.last_second_simulated_or_queued = current_second;
 
         if (suspend_resume.frames_left_to_simulate > 0) {
-            unsigned int millisecond_started;
-            pd->system->getSecondsSinceEpoch(&millisecond_started);
+            Timestamp start;
+            timestamp_now(&start);
+            unsigned int frames_simulated_this_iteration = 0;
             const float dt = 1.f / SUSPEND_RESUME_SIMULATION_REFRESH_RATE;
-            for (; suspend_resume.frames_left_to_simulate > 0; --suspend_resume.frames_left_to_simulate) {
+            while (suspend_resume.frames_left_to_simulate > 0) {
                 simulate(dt);
-                unsigned int current_millisecond;
-                pd->system->getSecondsSinceEpoch(&current_millisecond);
-                unsigned int milliseconds_simulated = current_millisecond - millisecond_started;
-                if (milliseconds_simulated >= SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS) break;
+                --suspend_resume.frames_left_to_simulate;
+                ++frames_simulated_this_iteration;
+                Timestamp now;
+                timestamp_now(&now);
+                Timespan time_simulated;
+                int milliseconds_simulated = timestamp_diff(&start, &now, &time_simulated);
+                if (milliseconds_simulated >= SUSPEND_RESUME_DISPLAY_INTERVAL_MILLISECONDS) {
+                    _suspend_resume_eta_buffer_count = min(SUSPEND_RESUME_ETA_BUFFER_SIZE, _suspend_resume_eta_buffer_count + 1);
+                    _suspend_resume_eta_buffer[_suspend_resume_eta_buffer_pointer].frames = frames_simulated_this_iteration;
+                    _suspend_resume_eta_buffer[_suspend_resume_eta_buffer_pointer].ms = milliseconds_simulated;
+                    _suspend_resume_eta_buffer_pointer = (_suspend_resume_eta_buffer_pointer + 1) % SUSPEND_RESUME_ETA_BUFFER_SIZE;
+                    break;
+                }
             }
             if (suspend_resume.frames_left_to_simulate == 0) {
                 suspend_resume.total_frames_to_simulate = 0;
@@ -160,7 +180,17 @@ static int _update(void* userdata) {
                 resume_end();
             }
             else {
-                update_display = resume_update(suspend_resume.frames_left_to_simulate, suspend_resume.total_frames_to_simulate);
+                unsigned int total_milliseconds = 0;
+                unsigned int total_frames = 0;
+                for (int i = 0; i < _suspend_resume_eta_buffer_count; ++i) {
+                    total_milliseconds += _suspend_resume_eta_buffer[i].ms;
+                    total_frames += _suspend_resume_eta_buffer[i].frames;
+                }
+                total_milliseconds /= (unsigned int)_suspend_resume_eta_buffer_count;
+                total_frames       /= (unsigned int)_suspend_resume_eta_buffer_count;
+                const float fpms = (float)total_milliseconds / (float)total_frames;
+                const int   eta  = (int)((float)suspend_resume.frames_left_to_simulate * fpms);
+                update_display = resume_update(suspend_resume.total_frames_to_simulate - suspend_resume.frames_left_to_simulate, suspend_resume.total_frames_to_simulate, fpms * 1000.f, eta);
                 do_update = false;
             }
         }
@@ -204,9 +234,9 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
         srand(pd->system->getSecondsSinceEpoch(NULL));
         _mem_init();
 #ifdef USING_SUSPEND_RESUME
-        suspend_resume.last_second_simulated_or_queued    = 0;
-        suspend_resume.frames_left_to_simulate  = 0;
-        suspend_resume.total_frames_to_simulate = 0;
+        suspend_resume.last_second_simulated_or_queued = 0;
+        suspend_resume.frames_left_to_simulate         = 0;
+        suspend_resume.total_frames_to_simulate        = 0;
 #endif
 #ifdef USING_AUTOSAVE
         init(autoload());

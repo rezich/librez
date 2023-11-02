@@ -1,7 +1,7 @@
 #pragma once
 
 #define UIID_STACK_SIZE 20
-typedef HASH UIID;
+typedef Hash UIID;
 
 UIID   uiid_hot;
 bool   ui_hot_is_active;
@@ -16,7 +16,7 @@ typedef enum {
 } UIID_FROM;
 
 void push_uiid(const void* whatever, UIID from) {
-    HASH hash = 0;
+    Hash hash = 0;
     switch (from) {
     case FROM_INT:     hash = hash_int(*(const int*)whatever);     break;
     case FROM_STRING:  hash = hash_string((const char *)whatever); break;

@@ -67,24 +67,24 @@ float accelerated_change(float x) {
     return 1.f / (0.2f + powf(1.04f, -fabsf(x) + 20.f));
 }
 
-typedef unsigned long HASH;
-HASH hash_string(const char* str) {
-    HASH hash = 5381;
+typedef unsigned long Hash;
+Hash hash_string(const char* str) {
+    Hash hash = 5381;
     int c;
     while ((c = *str++)) hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
     return hash;
 }
-HASH hash_int(int n) {
-    HASH x = (HASH)n;
+Hash hash_int(int n) {
+    Hash x = (Hash)n;
     x = ((x >> 16) ^ x) * 0x45d9f3b;
     x = ((x >> 16) ^ x) * 0x45d9f3b;
     x = (x >> 16) ^ x;
     return x;
 }
-HASH hash_combine(HASH a, HASH b) {
+Hash hash_combine(Hash a, Hash b) {
     return a ^ (b + 0x9e3779b9 + (a << 6) + (a >> 2));
 }
-HASH hash_pointer(const void* ptr) {
+Hash hash_pointer(const void* ptr) {
 #ifdef TARGET_SIMULATOR
     const int high = (int)((uintptr_t)ptr >> 32);
     const int low  = (int)((uintptr_t)ptr & 0xFFFFFFFF);
@@ -93,3 +93,24 @@ HASH hash_pointer(const void* ptr) {
     return hash_int((int)ptr);
 #endif
 }
+
+typedef struct {
+    unsigned int s;
+    unsigned int ms;
+} Timestamp;
+typedef struct {
+    unsigned int s;
+    unsigned int ms;
+} Timespan;
+void timestamp_now(Timestamp* timestamp) {
+    timestamp->s = pd->system->getSecondsSinceEpoch(&timestamp->ms);
+}
+unsigned int timestamp_diff(Timestamp* earlier, Timestamp* later, Timespan* diff) {
+    unsigned int ms_diff = (later->s - earlier->s) * 1000 + later->ms - earlier->ms;
+    if (diff) {
+        diff->s =  ms_diff / 1000;
+        diff->ms = ms_diff % 1000;
+    }
+    return ms_diff;
+}
+unsigned int timespan_get_ms(Timespan* timespan) { return timespan->s * 1000 + timespan->ms; }

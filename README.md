@@ -106,7 +106,7 @@ To make use of this system, you must define the following functions:
 - `static void simulate(float dt)` The simulation function.
 - `static void suspend()` Called when the game is suspended. **Automatically defined if `USING_AUTOSAVE` is also enabled.**
 - `static void resume_begin(unsigned int seconds)` Called when the game is resumed -- `seconds` is how many seconds are needed to simulate until the simulation is "caught up".
-- `static int  resume_update(unsigned int frames_left_to_simulate, unsigned int total_frames_to_simulate)` Called during the catch-up process. Use the parameters to display a loading bar or something. Return value is just like the normal `update()` function -- whether or not to update the display.
+- `static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, unsigned int estimated_milliseconds_remaining)` Called during the catch-up process. Use the parameters to display a loading bar or something. `fps` is the current average catch-up "framerate". Return value is just like the normal `update()` function -- whether or not to update the display.
 - `static void resume_end()` Called once the simulation is "caught up".
 
 #### `SUSPEND_RESUME_SIMULATION_REFRESH_RATE`
@@ -152,17 +152,29 @@ Easy ease function.
 ### `float accelerated_change(float x)`
 Possibly useful for crank motion.
 
-### `HASH hash_string(const char* str)`
+### `Hash hash_string(const char* str)`
 Hash the given string.
 
-### `HASH hash_int(int n)`
+### `Hash hash_int(int n)`
 Hash the given int.
 
-### `HASH hash_combine(HASH a, HASH b)`
-Combine the given `HASH`es.
+### `Hash hash_combine(Hash a, Hash b)`
+Combine the given `Hash`es.
 
-### `HASH hash_pointer(const void* ptr)`
+### `Hash hash_pointer(const void* ptr)`
 Hash the given pointer.
+
+### `typedef struct { ... } Timestamp`
+Represents a point in time.
+
+### `typedef struct { ... } Timespan`
+Represents a difference between points in time.
+
+### `void timestamp_now(Timestamp* timestamp)`
+Sets the given `Timestamp` to represent the current time.
+
+### `unsigned int timestamp_diff(Timestamp* earlier, Timestamp* later, Timespan* diff)`
+Returns the number of milliseconds between the two `Timestamp`s. If `diff` is not `NULL`, it will be set to the `Timespan` representing the difference.
 
 
 

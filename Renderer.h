@@ -279,7 +279,7 @@ void draw_text(Point top_left, const char* text, const Typesetting* typesetting)
 
     for (int text_index = 0; text[text_index] != 0; ++text_index) {
         if (text[text_index] == '\n') {
-            cursor = Point(top_left.x, cursor.y + typesetting->line_spacing);
+            cursor = Point(top_left.x, cursor.y + glyph_size.y + typesetting->line_spacing);
             continue;
         }
 
