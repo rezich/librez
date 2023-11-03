@@ -51,31 +51,29 @@ void _begin_rendering() {
 }
 #endif
 
-inline void renderer_mark_updated_rows(int start, int end) {
-    pd->graphics->markUpdatedRows(max(start, 0), min(end, LCD_ROWS - 1));
-}
+FORCE_INLINE void renderer_mark_updated_rows(int start, int end) { pd->graphics->markUpdatedRows(max(start, 0), min(end, LCD_ROWS - 1)); }
 
-inline LCDBitmap* new_bitmap(int width, int height, LCDColor bgcolor) { return pd->graphics->newBitmap(width, height, bgcolor); }
-inline void free_bitmap(LCDBitmap* bitmap) { pd->graphics->freeBitmap(bitmap); }
-inline void draw_bitmap(LCDBitmap * bitmap, int x, int y) { pd->graphics->drawBitmap(bitmap, x, y, kBitmapUnflipped); }
+FORCE_INLINE LCDBitmap* new_bitmap(int width, int height, LCDColor bgcolor) { return pd->graphics->newBitmap(width, height, bgcolor); }
+FORCE_INLINE void free_bitmap(LCDBitmap* bitmap) { pd->graphics->freeBitmap(bitmap); }
+FORCE_INLINE void draw_bitmap(LCDBitmap * bitmap, int x, int y) { pd->graphics->drawBitmap(bitmap, x, y, kBitmapUnflipped); }
 
-inline void clear(LCDColor color) { pd->graphics->clear(color); }
+FORCE_INLINE void clear(LCDColor color) { pd->graphics->clear(color); }
 
-inline void clip_set(Rect r) {
+FORCE_INLINE void clip_set(Rect r) {
     pd->graphics->setScreenClipRect(r.x, r.y, r.w, r.h);
 #ifdef USING_CUSTOM_RENDERER
     clip_rect = r;
     clip_rect_active = true;
 #endif
 }
-inline void clip_clear() {
+FORCE_INLINE void clip_clear() {
     pd->graphics->clearClipRect();
 #ifdef USING_CUSTOM_RENDERER
     clip_rect_active = false;
 #endif
 }
 
-inline void target_push(LCDBitmap* target) {
+FORCE_INLINE void target_push(LCDBitmap* target) {
     pd->graphics->pushContext(target);
 #ifdef USING_CUSTOM_RENDERER
     context_stack[context_stack_count++] = target;
@@ -83,14 +81,14 @@ inline void target_push(LCDBitmap* target) {
     else _set_draw_buffer_to_backbuffer();
 #endif
 }
-inline void target_push_debug() {
+FORCE_INLINE void target_push_debug() {
 #ifdef TARGET_SIMULATOR
     target_push(pd->graphics->getDebugBitmap());
 #else
     context_faking_debug = true;
 #endif
 }
-inline void target_pop() {
+FORCE_INLINE void target_pop() {
 #ifndef TARGET_SIMULATOR
     if (context_faking_debug) { context_faking_debug = false; return; }
 #endif
@@ -113,7 +111,7 @@ inline void target_pop() {
 }
 
 #ifdef USING_CUSTOM_RENDERER
-inline void _set_point(bool mask, int x, int y, LCDColor color) {
+FORCE_INLINE void _set_point(bool mask, int x, int y, LCDColor color) {
     if (x < 0 || x >= draw_buffer.width || y < 0 || y >= draw_buffer.height) return;
     if (clip_rect_active) {
         if (x < clip_rect.x || x >= clip_rect.x + clip_rect.w || y < clip_rect.y || y >= clip_rect.y + clip_rect.h) return;
@@ -134,7 +132,7 @@ inline void _set_point(bool mask, int x, int y, LCDColor color) {
     }
 }
 
-inline void _draw_point(int x, int y, LCDColor color) {
+FORCE_INLINE void _draw_point(int x, int y, LCDColor color) {
     if (color == kColorClear) {
         if (draw_buffer.mask) _set_point(true, x, y, kColorBlack);
         return;
@@ -143,17 +141,17 @@ inline void _draw_point(int x, int y, LCDColor color) {
     _set_point(false, x, y, color);
 }
 
-inline void _draw_hline(int x, int y, int width, LCDColor color) {
+FORCE_INLINE void _draw_hline(int x, int y, int width, LCDColor color) {
     if (color == kColorClear) return;
     pd->graphics->fillRect(x, y, width, 1, color);
 }
 
-inline void _draw_vline(int x, int y, int height, LCDColor color) {
+FORCE_INLINE void _draw_vline(int x, int y, int height, LCDColor color) {
     if (color == kColorClear) return;
     pd->graphics->fillRect(x, y, 1, height, color);
 }
 
-inline void _draw_line(Point a, Point b, LCDColor color) {
+FORCE_INLINE void _draw_line(Point a, Point b, LCDColor color) {
     if (color == kColorClear) return;
     /*     if (a.x == b.x) { _draw_vline(a.x, a.y, b.y - a.y, color); return; }
     else if (a.y == b.y) { _draw_hline(a.x, a.y, b.x - a.x, color); return; }*/
@@ -171,7 +169,7 @@ inline void _draw_line(Point a, Point b, LCDColor color) {
 }
 #endif
 
-inline void draw_point(Point p, LCDColor color) {
+FORCE_INLINE void draw_point(Point p, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
 #ifdef USING_CUSTOM_RENDERER
     _draw_point(p.x, p.y, color);
@@ -181,7 +179,7 @@ inline void draw_point(Point p, LCDColor color) {
 #endif
 }
 
-inline void draw_line(Point a, Point b, LCDColor color) {
+FORCE_INLINE void draw_line(Point a, Point b, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
 #ifdef USING_CUSTOM_RENDERER
     _draw_line(a, b, color);
@@ -191,7 +189,7 @@ inline void draw_line(Point a, Point b, LCDColor color) {
 #endif
 }
 
-inline void draw_rect(Rect r, LCDColor color) {
+FORCE_INLINE void draw_rect(Rect r, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
     pd->graphics->fillRect(r.x, r.y, r.w, r.h, color);
 }
@@ -249,21 +247,21 @@ void draw_triangle_outline(Point a, Point b, Point c, LCDColor color) {
 #endif
 }
 
-inline void draw_ellipse(Rect r, float angle_start, float angle_end, LCDColor color) {
+FORCE_INLINE void draw_ellipse(Rect r, float angle_start, float angle_end, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
     pd->graphics->fillEllipse(r.x, r.y, r.w, r.h, angle_start, angle_end, color);
 }
-inline void draw_ellipse_outline(Rect r, float angle_start, float angle_end, LCDColor color) {
+FORCE_INLINE void draw_ellipse_outline(Rect r, float angle_start, float angle_end, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
     pd->graphics->drawEllipse(r.x, r.y, r.w, r.h, 0, angle_start, angle_end, color);
 }
 
-inline void draw_circle(Point center, int diameter, LCDColor color) {
+FORCE_INLINE void draw_circle(Point center, int diameter, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
     int radius = diameter / 2;
     pd->graphics->fillEllipse(center.x - radius, center.y - radius, diameter, diameter, 0, 360, color);
 }
-inline void draw_circle_outline(Point center, int diameter, LCDColor color) {
+FORCE_INLINE void draw_circle_outline(Point center, int diameter, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
     int radius = diameter / 2;
     pd->graphics->drawEllipse(center.x - radius, center.y - radius, diameter, diameter, 0, 0, 360, color);

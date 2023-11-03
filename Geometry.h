@@ -48,14 +48,14 @@ typedef struct {
     float x;
     float y;
 } Vec2;
-inline void  vec2_multiply(Vec2* v, float scalar) {
+FORCE_INLINE void  vec2_multiply(Vec2* v, float scalar) {
     v->x *= scalar;
     v->y *= scalar;
 }
-inline float vec2_length_squared(Vec2 v) { return v.x * v.x + v.y * v.y; }
-inline float vec2_length(Vec2 v) { return sqrtf(vec2_length_squared(v)); }
-inline Point vec2_to_point(Vec2 v) { return Point((int)roundf(v.x), (int)roundf(v.y)); }
-inline void  vec2_normalize(Vec2* v) {
+FORCE_INLINE float vec2_length_squared(Vec2 v) { return v.x * v.x + v.y * v.y; }
+FORCE_INLINE float vec2_length(Vec2 v) { return sqrtf(vec2_length_squared(v)); }
+FORCE_INLINE Point vec2_to_point(Vec2 v) { return Point((int)roundf(v.x), (int)roundf(v.y)); }
+void  vec2_normalize(Vec2* v) {
     const float length = vec2_length(*v);
     if (length <= 0.f) *v = Vec2(0, 0);
     else vec2_multiply(v, 1.f / length);

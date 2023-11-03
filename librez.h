@@ -13,6 +13,12 @@
 #include <float.h>
 #include <math.h>
 
+#ifdef _WINDLL
+#define FORCE_INLINE __forceinline
+#else
+#define FORCE_INLINE __attribute__((always_inline)) inline
+#endif
+
 PlaydateAPI* pd = NULL;
 #include "Memory.h"
 #include "Util.h"
@@ -101,7 +107,7 @@ static int  update(float dt, void* userdata);
     }
     static bool autoload() {
 #ifdef AUTOSAVE_RESET
-        if (pd->file->unlink(AUTOSAVE_FILENAME, false) == -1) pd->system->logToConsole("Could not delete save file (probably because it doesn't exist.");
+        if (pd->file->unlink(AUTOSAVE_FILENAME, false) == -1) LOG("Could not delete save file (probably because it doesn't exist.");
 #ifdef USING_SUSPEND_RESUME
 #ifdef SUSPEND_RESUME_SIMULATE_SECONDS
         suspend_resume.last_second_simulated_or_queued = pd->system->getSecondsSinceEpoch(NULL) - SUSPEND_RESUME_SIMULATE_SECONDS;
@@ -113,7 +119,7 @@ static int  update(float dt, void* userdata);
 #endif
         SDFile* file = pd->file->open(AUTOSAVE_FILENAME, kFileReadData);
         if (!file) {
-            pd->system->logToConsole("Could not open autosave file to read! (probably no file exists)");
+            LOG("Could not open autosave file to read! (probably no file exists)");
 #ifdef USING_SUSPEND_RESUME
             suspend_resume.last_second_simulated_or_queued = pd->system->getSecondsSinceEpoch(NULL);
 #endif
@@ -155,7 +161,7 @@ static int _update(void* userdata) {
         const unsigned int seconds_to_simulate = current_second - suspend_resume.last_second_simulated_or_queued;
         if (seconds_to_simulate > 1) {
             const unsigned int more_frames = (unsigned int)((float)seconds_to_simulate * SUSPEND_RESUME_SIMULATION_REFRESH_RATE);
-            pd->system->logToConsole("Adding more frames: %u", more_frames);
+            LOG("Adding more frames: %u", more_frames);
             suspend_resume.total_frames_to_simulate += more_frames;
             suspend_resume.frames_left_to_simulate  += more_frames;
             if (!_is_resuming) resume_begin(seconds_to_simulate);
@@ -221,7 +227,7 @@ static int _update(void* userdata) {
 #if defined(USING_AUTOSAVE) && defined(AUTOSAVE_PERIOD)
         unsigned int current_second = pd->system->getSecondsSinceEpoch(NULL);
         if (current_second - last_second_autosaved >= AUTOSAVE_PERIOD) {
-            pd->system->logToConsole("Autosaving...");
+            LOG("Autosaving...");
             autosave();
             last_second_autosaved = current_second;
         }
