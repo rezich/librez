@@ -56,8 +56,11 @@ static int  update(float dt, void* userdata);
     static size_t _suspend_resume_eta_buffer_pointer = 0;
     static void suspend();
     static void resume_begin(unsigned int seconds);
-    static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, Timespan eta);
+    static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, Timespan estimated_time_remaining);
     static void resume_end();
+    #ifndef USING_AUTOSAVE
+        #error "USING_AUTOSAVE is necessary for USING_SUSPEND_RESUME"
+    #endif
 #endif
 #ifdef USING_AUTOSAVE
     static unsigned int last_second_autosaved = 0;

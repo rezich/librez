@@ -51,7 +51,7 @@ void set_alpha(LCDPattern* pattern, float alpha) {
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
             if (BAYER[row][col] > threshold)
-                (*pattern)[8 + row] |= (1 << col); // set
+                (*pattern)[8 + row] |=  (1 << col); // set
             else
                 (*pattern)[8 + row] &= ~(1 << col); // clear
         }
@@ -115,4 +115,26 @@ unsigned int timestamp_diff(Timestamp* earlier, Timestamp* later, Timespan* diff
     }
     return ms_diff;
 }
-//unsigned int timespan_get_ms(Timespan* timespan) { return timespan->s * 1000 + timespan->ms; }
+#define SECONDS_PER_DAY    86400
+#define SECONDS_PER_HOUR   3600
+#define SECONDS_PER_MINUTE 60
+void timespan_parse(Timespan timespan, unsigned int* days, unsigned int* hours, unsigned int* minutes, unsigned int* seconds, unsigned int* milliseconds) {
+    if (days)         *days         = timespan.s / SECONDS_PER_DAY;
+    timespan.s                     %= SECONDS_PER_DAY;
+    if (hours)        *hours        = timespan.s / SECONDS_PER_HOUR;
+    timespan.s                     %= SECONDS_PER_HOUR;
+    if (minutes)      *minutes      = timespan.s / SECONDS_PER_MINUTE;
+    timespan.s                     %= SECONDS_PER_MINUTE;
+    if (seconds)      *seconds      = timespan.s;
+    if (milliseconds) *milliseconds = timespan.ms;
+}
+
+#ifdef _WINDLL
+#define format_string(...) pd->system->formatString(__VA_ARGS__)
+#else
+#define format_string(...) \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"") \
+    pd->system->formatString(__VA_ARGS__); \
+    _Pragma("GCC diagnostic pop")
+#endif

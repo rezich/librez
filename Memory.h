@@ -1,10 +1,11 @@
 #pragma once
 
-#define MEM_ARENA_CHUNK_SIZE 1024 * 1024 * 1
+#ifndef MEM_ARENA_CHUNK_SIZE
+#define MEM_ARENA_CHUNK_SIZE 1024 * 1024 * 2
+#endif
+
 char* mem_arena_chunk;
-
 Mem_Arena mem_arena = 0;
-
 size_t mem_end[MEM_ARENA_COUNT] = { 0 };
 
 void _mem_init() {

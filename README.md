@@ -126,6 +126,9 @@ The size of the buffer used for calculating the ETA of the suspend/resume catch-
 ## Memory
 A memory allocation system is provided, using a stack of arena allocators in a shared chunk of memory. Typically, you want at least two memory arenas: one for stuff that is allocated once and will remain allocated for the duration of your game's execution, and another for per-frame temporary allocations. Depending on the complexity of your game, you may wish to include one or more additional arenas between these two: for example, you could have an arena for level-specific memory, that is reset and reused when transitioning from one level to the next.
 
+### `MEM_ARENA_CHUNK_SIZE`
+The amount of memory, in bytes, that will be set aside for use in the arena stack. Defaults to `1024 * 1024 * 2` (2MB).
+
 ### `void* mem_alloc(size_t bytes)`
 Allocates `bytes` bytes from the current arena.
 
@@ -178,6 +181,12 @@ Sets the given `Timestamp` to represent the current time.
 
 ### `unsigned int timestamp_diff(Timestamp* earlier, Timestamp* later, Timespan* diff)`
 Returns the number of milliseconds between the two `Timestamp`s. If `diff` is not `NULL`, it will be set to the `Timespan` representing the difference.
+
+### `void timespan_parse(Timespan timespan, unsigned int* days, unsigned int* hours, unsigned int* minutes, unsigned int* seconds, unsigned int* milliseconds)`
+Sets `days`, `hours`, `minutes`, `seconds`, and `milliseconds` based on `timespan`. `NULL` parameters are ignored.
+
+### `format_string(char **ret, const char *format, ...)`
+Wrapper for `pd->system->formatString()` which is not only easier to write but also suppresses `double` promotion warnings when building for the device.
 
 
 
