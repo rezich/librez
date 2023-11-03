@@ -1,6 +1,6 @@
 #pragma once
 
-#define Point(x, y) (Point) {(x), (y)}
+#define Point(x, y) (Point){(x), (y)}
 typedef struct {
     int x;
     int y;
@@ -12,7 +12,7 @@ void swap_points(Point* a, Point* b) {
 }
 
 
-#define Rect(x, y, w, h) (Rect) {(Point){(x), (y)}, (Point){(w), (h)}}
+#define Rect(x, y, w, h) (Rect){(Point){(x), (y)}, (Point){(w), (h)}}
 typedef union {
     struct {
         Point top_left;
@@ -43,7 +43,7 @@ Point get_center(Rect rect) { return Point(
 );}
 
 
-#define Vec2(x, y) (Vec2) {(x), (y)}
+#define Vec2(x, y) (Vec2){(x), (y)}
 typedef struct {
     float x;
     float y;

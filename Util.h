@@ -94,10 +94,12 @@ Hash hash_pointer(const void* ptr) {
 #endif
 }
 
+#define Timestamp(s, ms) (Timestamp){ (s), (ms) }
 typedef struct {
     unsigned int s;
     unsigned int ms;
 } Timestamp;
+#define Timespan(s, ms) (Timespan){ (s), (ms) }
 typedef struct {
     unsigned int s;
     unsigned int ms;
@@ -108,9 +110,9 @@ void timestamp_now(Timestamp* timestamp) {
 unsigned int timestamp_diff(Timestamp* earlier, Timestamp* later, Timespan* diff) {
     unsigned int ms_diff = (later->s - earlier->s) * 1000 + later->ms - earlier->ms;
     if (diff) {
-        diff->s =  ms_diff / 1000;
+        diff->s  = ms_diff / 1000;
         diff->ms = ms_diff % 1000;
     }
     return ms_diff;
 }
-unsigned int timespan_get_ms(Timespan* timespan) { return timespan->s * 1000 + timespan->ms; }
+//unsigned int timespan_get_ms(Timespan* timespan) { return timespan->s * 1000 + timespan->ms; }

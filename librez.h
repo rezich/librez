@@ -46,7 +46,7 @@ static int  update(float dt, void* userdata);
     } suspend_resume;
     static bool _is_resuming = false;
     #ifndef SUSPEND_RESUME_ETA_BUFFER_SIZE
-        #define SUSPEND_RESUME_ETA_BUFFER_SIZE 20
+        #define SUSPEND_RESUME_ETA_BUFFER_SIZE 60
     #endif
     static struct {
         unsigned int ms;
@@ -56,19 +56,21 @@ static int  update(float dt, void* userdata);
     static size_t _suspend_resume_eta_buffer_pointer = 0;
     static void suspend();
     static void resume_begin(unsigned int seconds);
-    static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, unsigned int estimated_milliseconds_remaining);
+    static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, Timespan eta);
     static void resume_end();
 #endif
 #ifdef USING_AUTOSAVE
     static unsigned int last_second_autosaved = 0;
     static bool _autosave_disabled = false;
-#ifndef AUTOSAVE_FILENAME
-#define AUTOSAVE_FILENAME "autosave"
+    #ifndef AUTOSAVE_FILENAME
+        #define AUTOSAVE_FILENAME "autosave"
+    #endif
+    #if !defined(AUTOSAVE_DATA)
+        static void autosave();
+        static bool autoload();
+    #endif
 #endif
-    static void autosave();
-    static bool autoload();
-#endif
-#if defined(USING_SUSPEND_RESUME) && defined(USING_AUTOSAVE) && defined(AUTOSAVE_DATA)
+#if defined(USING_AUTOSAVE) && defined(AUTOSAVE_DATA)
     static void autosave() {
         if (_autosave_disabled) return;
         SDFile* file = pd->file->open(AUTOSAVE_FILENAME, kFileWrite);
@@ -76,10 +78,12 @@ static int  update(float dt, void* userdata);
             pd->system->error("Could not open autosave file to write!");
             assert(false);
         }
+#ifdef USING_SUSPEND_RESUME
         if (pd->file->write(file, &suspend_resume, sizeof(suspend_resume)) == -1) {
             pd->system->error("Failed to write suspend_resume to autosave file!");
             assert(false);
         }
+#endif
         if (pd->file->write(file, &AUTOSAVE_DATA, sizeof(AUTOSAVE_DATA)) == -1) {
             pd->system->error("Failed to write save data to autosave file!");
             assert(false);
@@ -112,10 +116,12 @@ static int  update(float dt, void* userdata);
 #endif
             return false;
         }
+#ifdef USING_SUSPEND_RESUME
         if (pd->file->read(file, &suspend_resume, sizeof(suspend_resume)) == -1) {
             pd->system->error("Failed to read last_second_simulated_or_queued from autosave file!");
             assert(false);
         }
+#endif
         if (pd->file->read(file, &state, sizeof(AUTOSAVE_DATA)) == -1) {
             pd->system->error("Failed to read save data from autosave file!");
             assert(false);
@@ -189,7 +195,15 @@ static int _update(void* userdata) {
                 total_milliseconds /= (unsigned int)_suspend_resume_eta_buffer_count;
                 total_frames       /= (unsigned int)_suspend_resume_eta_buffer_count;
                 const float fpms = (float)total_milliseconds / (float)total_frames;
-                const int   eta  = (int)((float)suspend_resume.frames_left_to_simulate * fpms);
+#ifdef _WINDLL
+#pragma warning( push )
+#pragma warning( disable : 26451 )
+#endif
+                const unsigned long long eta_ms = (unsigned long long)((float)suspend_resume.frames_left_to_simulate * fpms);
+#ifdef _WINDLL
+#pragma warning( pop )
+#endif
+                Timespan eta = Timespan((unsigned int)(eta_ms / 1000), (unsigned int)(eta_ms % 1000));
                 update_display = resume_update(suspend_resume.total_frames_to_simulate - suspend_resume.frames_left_to_simulate, suspend_resume.total_frames_to_simulate, fpms * 1000.f, eta);
                 do_update = false;
             }

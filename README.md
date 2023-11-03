@@ -82,7 +82,7 @@ Provides an autosave system for games that are meant to be played in short burst
 
 When enabled, the `static void init()` function declaration is replaced with `static void init(bool autosave_loaded)`, where `autosave_loaded` is passed as `true` if the system found and successfully loaded an autosave, or `false` if it did not (i.e. if this is the first time the game is run).
 
-Additionally, this feature declares `autosave()` and `autoload()` functions. If `USING_SUSPEND_RESUME` and `AUTOSAVE_DATA` are defined, then these are filled out for you -- otherwise, you must implement them on your own.
+Additionally, this feature declares `autosave()` and `autoload()` functions. If `AUTOSAVE_DATA` is defined, then these are filled out for you -- otherwise, you must implement them on your own. If `USING_SUSPEND_RESUME` is defined, then its data gets autosaved/loaded automatically, too.
 
 #### `AUTOSAVE_FILENAME`
 Defines the filename for the autosave file. `autosave` by default if not specified.
@@ -106,7 +106,7 @@ To make use of this system, you must define the following functions:
 - `static void simulate(float dt)` The simulation function.
 - `static void suspend()` Called when the game is suspended. **Automatically defined if `USING_AUTOSAVE` is also enabled.**
 - `static void resume_begin(unsigned int seconds)` Called when the game is resumed -- `seconds` is how many seconds are needed to simulate until the simulation is "caught up".
-- `static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, unsigned int estimated_milliseconds_remaining)` Called during the catch-up process. Use the parameters to display a loading bar or something. `fps` is the current average catch-up "framerate". Return value is just like the normal `update()` function -- whether or not to update the display.
+- `static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, Timespan eta)` Called during the catch-up process. Use the parameters to display a loading bar or something. `fps` is the current average catch-up "framerate". Return value is just like the normal `update()` function -- whether or not to update the display.
 - `static void resume_end()` Called once the simulation is "caught up".
 
 #### `SUSPEND_RESUME_SIMULATION_REFRESH_RATE`
@@ -117,6 +117,9 @@ The interval at which the display is updated while simulating the suspend/resume
 
 #### `SUSPEND_RESUME_SIMULATE_SECONDS`
 Used for testing out long suspend/resume simulation catch-ups. Causes the game to pretend that the given number of seconds has passed since the last time the game was run, when the game launches.
+
+#### `SUSPEND_RESUME_ETA_BUFFER_SIZE`
+The size of the buffer used for calculating the ETA of the suspend/resume catch-up process. Each element of the buffer is 8 bytes. Defaults to `60`.
 
 
 
