@@ -20,15 +20,15 @@
 #endif
 
 PlaydateAPI* pd = NULL;
-#include "System.h"
-#include "Memory.h"
-#include "Util.h"
-#include "Geometry.h"
-#include "Font.h"
-#include "Renderer.h"
-#include "Input.h"
+#include "src/System.h"
+#include "src/Memory.h"
+#include "src/Util.h"
+#include "src/Geometry.h"
+#include "src/Font.h"
+#include "src/Renderer.h"
+#include "src/Input.h"
 #ifdef USING_UI
-#include "UI.h"
+#include "src/UI.h"
 #endif
 
 #ifdef USING_AUTOSAVE
