@@ -1,31 +1,28 @@
 This is a sort of library or framework or whatever to facilitate the creation of Playdate games using the Playdate C API.
 
-To use it, structure your main.c as follows:
+***Note that this only works with Visual Studio for now, as that's what I'm using, and I don't know what `#define`s I should look for for MacOS and Linux.***
+
+# Examples
+
+## Basic
+
+This is a basic example that is barely interactive at all, but shows the overall structure of a project using this library/framework/thing.
 
 ```c
 // define your memory arenas
 typedef enum {
-    MA_GAME,
-    //MA_LEVEL,
-    MA_FRAME,
+    ARENA_GAME,    // stuff that your whole game uses goes in here
+    //ARENA_LEVEL, // if the game has levels, we could add this arena and put level stuff in there
+    ARENA_FRAME,   // per-frame temporary stuff goes in here
     MEM_ARENA_COUNT
 } Mem_Arena;
 
 // define any additional features you wish to use
-//#define USING_FPS_COUNTER
-#define USING_UI
 #define USING_CUSTOM_RENDERER
 
-// define your input actions (NOTE: for now, the first six are required if USING_UI is defined)
+// define your input actions
 typedef enum {
-    IA_UI_ACTION,
-    IA_UI_CANCEL,
-    IA_UI_UP,
-    IA_UI_DOWN,
-    IA_UI_LEFT,
-    IA_UI_RIGHT,
-    IA_META_TOGGLE,
-    IA_HOLD_B,
+    IA_ACTION, // action button, aka "A"
     INPUT_ACTION_COUNT
 } Input_Action;
 
@@ -34,28 +31,131 @@ typedef enum {
 
 // called once when the game starts
 static void init() {
-    mem_use(MA_FRAME); // set the memory allocator to use the frame arena
+    //
+    // your init logic goes here
+    //
+    mem_use(ARENA_FRAME); // set the memory allocator to use the frame arena
 }
 
 // input handler
 static void input(PDButtons current, PDButtons pushed, PDButtons released) {
-    if (pushed & kButtonA)     input_set(IA_UI_ACTION);
-    if (pushed & kButtonB)     input_set(IA_UI_CANCEL);
-    if (pushed & kButtonRight) input_set(IA_UI_RIGHT);
-    if (pushed & kButtonLeft)  input_set(IA_UI_LEFT);
-    if (pushed & kButtonUp)    input_set(IA_UI_UP);
-    if (pushed & kButtonDown)  input_set(IA_UI_DOWN);
+    if (current & kButtonA) input_set(IA_ACTION);
 }
 
 static int update(float dt, void* userdata) {
-    
-    // your game logic goes here
+    // just so there's any interactivity in this example at all
+    clear(kColorWhite);
+    if (input_get(IA_ACTION)) draw_text(Point(0, 0), "Hello, world!", NULL);
 
-    UI_reset();  // if you're using the UI system
-    mem_reset(); // reset the frame arena
+    //
+    // your game logic goes here
+    //
+    
+    mem_reset(); // reset the frame arena at the end of the frame
     return 1;
 }
 ```
+
+## Real-time game with suspend/resume and autosave
+
+This is an example of the suspend/resume system and the autosave system. It's a zero-player game where the score goes up by one each frame -- but what makes it interesting is, if you put the Playdate to sleep or pause or quit the game, the game will autosave, and then after you awaken the Playdate or unpause or relaunch the game, a screen will appear showing a progress bar and estimated time remaining, while the game runs its simulation loop as fast as it can. Once this process is done, the game resumes as normal, but, aside from the loading screen, it's as though the game was running in the background and progressing in real time. Also, it autosaves every thirty seconds, just in case.
+
+```c
+typedef enum {
+    ARENA_GAME,
+    ARENA_FRAME,
+    MEM_ARENA_COUNT
+} Mem_Arena;
+
+typedef enum {
+    IA_PLACEHOLDER, // no inputs in this example
+    INPUT_ACTION_COUNT
+} Input_Action;
+
+struct {
+    int score;
+} state;
+
+#define USING_FPS_COUNTER
+#define USING_CUSTOM_RENDERER
+#define USING_AUTOSAVE
+    #define AUTOSAVE_DATA state
+    #define AUTOSAVE_PERIOD 30
+#define USING_SUSPEND_RESUME
+
+#include "../../librez/librez.h"
+
+static void init(bool autosave_loaded) {
+    mem_use(ARENA_FRAME);
+}
+static void input(PDButtons current, PDButtons pushed, PDButtons released) {}
+
+// run more iterations of the bullshit loop when testing on PC vs on the Playdate
+#ifdef TARGET_SIMULATOR
+#define BULLSHIT_LOOP_COUNT 70000
+#else
+#define BULLSHIT_LOOP_COUNT 5000
+#endif
+
+// when USING_SUSPEND_RESUME is enabled, you must define a simulate(dt) function like this one. this
+// function is called automatically when the game determines that it needs to "catch up" the
+// simulation after the game has been resumed after being suspended.
+static void simulate(float dt) {
+    state.score += 1;
+    // this is just to give the CPU something to crunch on so we can see the catch-up process
+    if (suspend_resume.frames_left_to_simulate > 0) for (int i = 0; i < BULLSHIT_LOOP_COUNT; ++i) {
+        state.score += (i % 2) ? 1 : -1;
+    }
+}
+
+// clear the background once instead of every frame, for performance during suspend/resume catch-up
+static void resume_begin(unsigned int seconds) { clear(kColorBlack); }
+static int  resume_update(unsigned int frames_simulated, unsigned int total_frames_to_simulate, float fps, Timespan estimated_time_remaining) {
+    if (fps == 0) return 0;
+
+    const int BAR_HEIGHT = 20;
+    const int BAR_HPADDING = 1;
+    const int bar_width = (int)((float)frames_simulated / (float)total_frames_to_simulate * (float)(LCD_COLUMNS - 1)) - BAR_HPADDING * 2;
+    const Rect r = Rect(BAR_HPADDING, LCD_ROWS / 2 - BAR_HEIGHT / 2, bar_width, BAR_HEIGHT);
+    draw_rect(r, kColorWhite);
+
+    Typesetting typesetting = DEFAULT_TYPESETTING;
+    typesetting.color = kColorWhite;
+    draw_text(Point(BAR_HPADDING, LCD_ROWS / 2 - BAR_HEIGHT / 2 - 10), "SIMULATING TIMESKIP...", &typesetting);
+
+    // draw a black box over the bottom text because we're not clearing the whole screen each frame
+    Point bottom_text_pos = Point(BAR_HPADDING, LCD_ROWS / 2 + BAR_HEIGHT / 2 + 1);
+    draw_rect(Rect(bottom_text_pos.x, bottom_text_pos.y, LCD_COLUMNS - 1 - BAR_HPADDING * 2, 9), kColorBlack);
+
+    // here's an example of the memory arena system at work. we need a buffer to store our formatted
+    // string in, so we ask the arena stack for 80 bytes. we don't need to free this memory, because
+    // mem_reset() at the end of the frame will reset the arena pointer back to the start of the
+    // current arena (which is ARENA_FRAME) for us!
+    char* bottom_text = mem_alloc(80);
+    unsigned int hours, minutes, seconds, milliseconds;
+    timespan_parse(estimated_time_remaining, NULL, &hours, &minutes, &seconds, &milliseconds);
+    format_string(&bottom_text, "ETA %02u:%02u:%02u.%03u", hours, minutes, seconds, milliseconds);
+    draw_text(bottom_text_pos, bottom_text, &typesetting);
+
+    mem_reset();
+    return 1;
+}
+static void resume_end() {} // we don't need to do anything but get back to the game after resuming
+
+static int update(float dt, void* userdata) {
+    simulate(dt); // run the simulation normally
+
+    clear(kColorWhite);
+
+    char* score_string = mem_alloc(80);
+    format_string(&score_string, "SCORE: %u", state.score);
+    draw_text(Point(1, 20), score_string, NULL);
+
+    mem_reset();
+    return 1;
+}
+```
+
 
 # API Reference
 
@@ -291,6 +391,11 @@ Gets whether the given `Input_Action` was activated this frame.
 
 ### `void input_set(Input_Action action)`
 Sets the given `Input_Action` to be activated this frame. For use in `input()`.
+
+
+
+## System
+(TODO)
 
 
 

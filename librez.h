@@ -20,6 +20,7 @@
 #endif
 
 PlaydateAPI* pd = NULL;
+#include "System.h"
 #include "Memory.h"
 #include "Util.h"
 #include "Geometry.h"
