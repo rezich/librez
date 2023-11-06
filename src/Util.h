@@ -23,7 +23,6 @@
 
 const uint8_t PATTERN_WHITE[8] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 const uint8_t PATTERN_BLACK[8] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-
 const uint8_t BAYER[8][8] = {
     { 0, 32,  8, 40,  2, 34, 10, 42},
     {48, 16, 56, 24, 50, 18, 58, 26},
@@ -34,28 +33,15 @@ const uint8_t BAYER[8][8] = {
     {15, 47,  7, 39, 13, 45,  5, 37},
     {63, 31, 55, 23, 61, 29, 53, 21}
 };
-
-void set_black(LCDPattern* pattern) {
-    memcpy(*pattern, PATTERN_BLACK, sizeof(PATTERN_BLACK));
-}
-void set_white(LCDPattern* pattern) {
-    memcpy(*pattern, PATTERN_WHITE, sizeof(PATTERN_WHITE));
-}
+void set_black(LCDPattern* pattern) { memcpy(*pattern, PATTERN_BLACK, sizeof(PATTERN_BLACK)); }
+void set_white(LCDPattern* pattern) { memcpy(*pattern, PATTERN_WHITE, sizeof(PATTERN_WHITE)); }
 void set_alpha(LCDPattern* pattern, float alpha) {
-    if (alpha == 1.f) { //TODO: fix?!
-        uint8_t* dest = (*pattern) + 8 * sizeof(uint8_t);
-        memcpy(dest, PATTERN_WHITE, sizeof(PATTERN_WHITE));
-        return;
-    }
-    const uint8_t threshold = (uint8_t)((1.f - alpha) * 63.f);
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-            if (BAYER[row][col] > threshold)
-                (*pattern)[8 + row] |=  (1 << col); // set
-            else
-                (*pattern)[8 + row] &= ~(1 << col); // clear
-        }
-    }
+    const uint8_t threshold = (uint8_t)((1.f - alpha) * 64.f);
+    for (int row = 0; row < 8; row++) for (int col = 0; col < 8; col++)
+        if (BAYER[row][col] >= threshold)
+            (*pattern)[8 + row] |=  (1 << col); // set
+        else
+            (*pattern)[8 + row] &= ~(1 << col); // clear
 }
 
 float ease(float x, float target, float speed) {
