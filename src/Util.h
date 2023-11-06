@@ -5,7 +5,7 @@
 #pragma warning( push )
 #pragma warning( disable : 26451 )
 #endif
-#include "lib/stb_printf.h"
+#include "../lib/stb_printf.h"
 #ifdef _WINDLL
 #pragma warning( pop )
 #endif

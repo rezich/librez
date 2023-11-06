@@ -4,14 +4,10 @@
 #define MEM_ARENA_CHUNK_SIZE 1024 * 1024 * 2
 #endif
 
-char* mem_arena_chunk;
+char mem_arena_chunk[MEM_ARENA_CHUNK_SIZE] = { 0 };
 Mem_Arena mem_arena = 0;
 size_t mem_end[MEM_ARENA_COUNT] = { 0 };
 
-void _mem_init() {
-    mem_arena_chunk = pd->system->realloc(NULL, MEM_ARENA_CHUNK_SIZE);
-    for (int i = 0; i < MEM_ARENA_CHUNK_SIZE; ++i) mem_arena_chunk[i] = 0;
-}
 void* mem_alloc(size_t bytes) {
     void* ptr = mem_arena_chunk + mem_end[mem_arena];
     mem_end[mem_arena] += bytes;

@@ -256,7 +256,6 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
 #endif
         pd->system->setUpdateCallback(_update, NULL);
         srand(pd->system->getSecondsSinceEpoch(NULL));
-        _mem_init();
 #ifdef USING_SUSPEND_RESUME
         suspend_resume.last_second_simulated_or_queued = 0;
         suspend_resume.frames_left_to_simulate         = 0;
