@@ -221,6 +221,8 @@ Used for testing out long suspend/resume simulation catch-ups. Causes the game t
 #### `SUSPEND_RESUME_ETA_BUFFER_SIZE`
 The size of the buffer used for calculating the ETA of the suspend/resume catch-up process. Each element of the buffer is 8 bytes. Defaults to `60`.
 
+### `USING_PD_FORMAT_STRING`
+Have `string_format()` wrap `pd->system->formatString()`, instead of `stbsp_snprintf()` (which it does by default).
 
 
 ## Memory

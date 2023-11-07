@@ -1,5 +1,17 @@
 #pragma once
 
+#ifndef USE_PD_STRING_FORMAT
+#ifdef _WINDLL
+#define format_string(...) stbsp_snprintf(__VA_ARGS__)
+#else
+#define format_string(...) \
+    _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"") \
+    stbsp_snprintf(__VA_ARGS__); \
+    _Pragma("GCC diagnostic pop")
+#endif
+#else
+
 #ifdef _WINDLL
 #define format_string(...) pd->system->formatString(__VA_ARGS__)
 #else
@@ -18,6 +30,7 @@
     _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"") \
     pd->system->logToConsole(__VA_ARGS__); \
     _Pragma("GCC diagnostic pop")
+#endif
 #endif
 
 FORCE_INLINE PDMenuItem* sysmenu_add(const char* title, PDMenuItemCallbackFunction* callback, void* userdata) { return pd->system->addMenuItem(title, callback, userdata); }
