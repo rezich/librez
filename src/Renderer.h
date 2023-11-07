@@ -189,35 +189,6 @@ FORCE_INLINE void draw_line(Point a, Point b, LCDColor color) {
 #endif
 }
 
-FORCE_INLINE void draw_rect(Rect r, LCDColor color) {
-    RETURN_IF_FAKING_DEBUG_RENDERING;
-    pd->graphics->fillRect(r.x, r.y, r.w, r.h, color);
-}
-void draw_rect_outline(Rect r, LCDColor color) {
-    RETURN_IF_FAKING_DEBUG_RENDERING;
-#ifdef USING_CUSTOM_RENDERER
-    Point top_left = r.top_left;
-    Point top_right = get_top_right(r);
-    Point bottom_right = get_bottom_right(r);
-    Point bottom_left = get_bottom_left(r);
-    _draw_line(top_left, top_right, color);
-    _draw_line(bottom_left, bottom_right, color);
-
-    // 
-    top_left.y     += 1;
-    top_right.y    += 1;
-    bottom_left.y  -= 1;
-    bottom_right.y -= 1;
-
-    _draw_line(top_right, bottom_right, color);
-    _draw_line(top_left, bottom_left, color);
-
-    renderer_mark_updated_rows(r.y, r.y + r.h - 1);
-#else
-    pd->graphics->drawRect(r.x, r.y, r.w, r.h, color);
-#endif
-}
-
 void draw_triangle(Point a, Point b, Point c, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
 //#ifdef USING_CUSTOM_RENDERER
@@ -267,68 +238,64 @@ FORCE_INLINE void draw_circle_outline(Point center, int diameter, LCDColor color
     pd->graphics->drawEllipse(center.x - radius, center.y - radius, diameter, diameter, 0, 0, 360, color);
 }
 
-void draw_roundrect(Rect r, int corner_size, LCDColor color) {
+FORCE_INLINE void draw_rect(Rect r, int roundness, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
+    if (roundness == 0) { pd->graphics->fillRect(r.x, r.y, r.w, r.h, color); return; }
+    const int roundness2 = roundness * 2;
 
-    const int corner2 = corner_size * 2;
+    const Rect top = Rect(r.x + roundness, r.y, r.w - roundness2, roundness);
+    const Rect mid = Rect(r.x, r.y + roundness, r.w, r.h - roundness2);
+    const Rect bot = Rect(r.x + roundness, r.y + r.h - roundness, r.w - roundness2, roundness);
+    const Rect nw  = Rect(r.x + r.w - roundness2, r.y, roundness2, roundness2);
+    const Rect sw  = Rect(r.x + r.w - roundness2, r.y + r.h - roundness2, roundness2, roundness2);
+    const Rect se  = Rect(r.x, r.y + r.h - roundness2, roundness2, roundness2);
+    const Rect ne  = Rect(r.x, r.y, roundness2, roundness2);
 
-    Rect c = r;
-    c.x += corner_size;
-    c.y += corner_size;
-    c.w -= corner2;
-    c.h -= corner2;
-
-    Rect n = r;
-    n.x += corner_size;
-    n.w -= corner2;
-    n.h = corner_size;
-
-    Rect s = r;
-    s.x += corner_size;
-    s.y = r.y + r.h - corner_size;
-    s.w -= corner2;
-    s.h = corner_size;
-
-    Rect w = r;
-    w.y += corner_size;
-    w.w = corner_size;
-    w.h -= corner2;
-
-    Rect e = r;
-    e.x = r.x + r.h - corner_size;
-    e.y += corner_size;
-    e.w = corner_size;
-    e.h -= corner2;
-    
-    const Rect nw = Rect(r.x + r.w - corner2, r.y, corner2, corner2);
-    const Rect sw = Rect(r.x + r.w - corner2, r.y + r.h - corner2, corner2, corner2);
-    const Rect se = Rect(r.x, r.y + r.h - corner2, corner2, corner2);
-    const Rect ne = Rect(r.x, r.y, corner2, corner2);
-
-    draw_rect(c, color);
-    draw_rect(n, color);
-    draw_rect(s, color);
-    draw_rect(w, color);
-    draw_rect(e, color);
+    pd->graphics->fillRect(top.x, top.y, top.w, top.h, color);
+    pd->graphics->fillRect(mid.x, mid.y, mid.w, mid.h, color);
+    pd->graphics->fillRect(bot.x, bot.y, bot.w, bot.h, color);
     draw_ellipse(nw,   0.f,  90.f, color);
     draw_ellipse(sw,  90.f, 180.f, color);
     draw_ellipse(se, 180.f, 270.f, color);
     draw_ellipse(ne, 270.f, 360.f, color);
+
 }
-void draw_roundrect_outline(Rect r, int corner_size, LCDColor color) {
+void draw_rect_outline(Rect r, int roundness, LCDColor color) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
+    if (roundness == 0) {
+#ifdef USING_CUSTOM_RENDERER
+        Point top_left     = r.top_left;
+        Point top_right    = get_top_right(r);
+        Point bottom_right = get_bottom_right(r);
+        Point bottom_left  = get_bottom_left(r);
+        _draw_line(   top_left,    top_right, color);
+        _draw_line(bottom_left, bottom_right, color);
 
-    const int corner2 = corner_size * 2;
+        top_left.y     += 1;
+        top_right.y    += 1;
+        bottom_left.y  -= 1;
+        bottom_right.y -= 1;
 
-    const Rect nw = Rect(r.x + r.w - corner2, r.y, corner2, corner2);
-    const Rect sw = Rect(r.x + r.w - corner2, r.y + r.h - corner2, corner2, corner2);
-    const Rect se = Rect(r.x, r.y + r.h - corner2, corner2, corner2);
-    const Rect ne = Rect(r.x, r.y, corner2, corner2);
+        _draw_line(top_right, bottom_right, color);
+        _draw_line( top_left,  bottom_left, color);
 
-    draw_line(Point(r.x + corner_size, r.y), Point(r.x + r.w - 1 - corner_size, r.y), color);
-    draw_line(Point(r.x + corner_size, r.y + r.h - 1), Point(r.x + r.w - corner_size, r.y + r.h - 1), color);
-    draw_line(Point(r.x, r.y + corner_size), Point(r.x, r.y + r.h - 1 - corner_size), color);
-    draw_line(Point(r.x + r.w - 1, r.y + corner_size), Point(r.x + r.w - 1, r.y + r.h - 1 - corner_size), color);
+        renderer_mark_updated_rows(r.y, r.y + r.h - 1);
+#else
+        pd->graphics->drawRect(r.x, r.y, r.w, r.h, color);
+#endif
+        return;
+    }
+    const int roundness2 = roundness * 2;
+
+    const Rect nw = Rect(r.x + r.w - roundness2, r.y, roundness2, roundness2);
+    const Rect sw = Rect(r.x + r.w - roundness2, r.y + r.h - roundness2, roundness2, roundness2);
+    const Rect se = Rect(r.x, r.y + r.h - roundness2, roundness2, roundness2);
+    const Rect ne = Rect(r.x, r.y, roundness2, roundness2);
+
+    _draw_line(Point(r.x + roundness, r.y), Point(r.x + r.w - 1 - roundness, r.y), color);
+    _draw_line(Point(r.x + roundness, r.y + r.h - 1), Point(r.x + r.w - 1 - roundness, r.y + r.h - 1), color);
+    _draw_line(Point(r.x, r.y + roundness), Point(r.x, r.y + r.h - 1 - roundness), color);
+    _draw_line(Point(r.x + r.w - 1, r.y + roundness), Point(r.x + r.w - 1, r.y + r.h - 1 - roundness), color);
 
     draw_ellipse_outline(nw,   0.f,  90.f, color);
     draw_ellipse_outline(sw,  90.f, 180.f, color);

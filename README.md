@@ -222,7 +222,7 @@ Used for testing out long suspend/resume simulation catch-ups. Causes the game t
 The size of the buffer used for calculating the ETA of the suspend/resume catch-up process. Each element of the buffer is 8 bytes. Defaults to `60`.
 
 ### `USING_PD_FORMAT_STRING`
-Have `string_format()` wrap `pd->system->formatString()`, instead of `stbsp_snprintf()` (which it does by default).
+Have `string_format()` wrap `pd->system->formatString()`, instead of `stbsp_sprintf()` (which it does by default).
 
 
 ## Memory
@@ -288,7 +288,7 @@ Returns the number of milliseconds between the two `Timestamp`s. If `diff` is no
 Sets `days`, `hours`, `minutes`, `seconds`, and `milliseconds` based on `timespan`. `NULL` parameters are ignored.
 
 ### `format_string(char **ret, const char *format, ...)`
-Wrapper for `pd->system->formatString()` which is not only easier to write but also suppresses `double` promotion warnings when building for the device.
+Wrapper for `stbsp_sprintf()`, unless `USING_PD_FORMAT_STRING` is defined, then it's a wrapper for `pd->system->formatString()`. Suppresses `double` promotion warnings when building for the device.
 
 
 
@@ -356,11 +356,11 @@ Draw a single pixel.
 ### `void draw_line(Point a, Point b, LCDColor color)`
 Draw a one-pixel line. Should be a wrapper for `pd->graphics->drawLine()`, except that's busted -- hence, the impetus for the custom renderer.
 
-### `void draw_rect(Rect r, LCDColor color)`
-Wrapper for `pd->graphics->fillRect()`.
+### `void draw_rect(Rect r, int roundness, LCDColor color)`
+Wrapper for `pd->graphics->fillRect()`, with support for `roundness`.
 
-### `void draw_rect_outline(Rect r, LCDColor color)`
-Wrapper for `pd->graphics->drawRect()`.
+### `void draw_rect_outline(Rect r, int roundness, LCDColor color)`
+Wrapper for `pd->graphics->drawRect()`, with support for `roundness`.
 
 ### `void draw_triangle(Point a, Point b, Point c, LCDColor color)`
 Wrapper for `pd->graphics->fillTriangle()`. ***Currently unavailable when custom renderer is enabled.***

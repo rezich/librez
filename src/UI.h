@@ -116,6 +116,8 @@ typedef struct {
     LCDColor bg;
     Point padding;
     UI_Clipping clipping;
+    int button_roundness;
+    int checkbox_roundness;
 } UI_Style;
 
 #define UI_MAX_COLUMNS 20
@@ -322,7 +324,7 @@ void Label(const char* label) {
     const Rect rect = ui_widget_begin();
     const int height = 10;
     const Rect this_rect = Rect(rect.x, rect.y, rect.w, height);
-    draw_rect(this_rect, ctx->style->fg);
+    draw_rect(this_rect, 0, ctx->style->fg);
     ui_widget_end(height);
 }
 void Horizontal_Rule(int horizontal_padding, int vertical_padding) {
@@ -332,14 +334,14 @@ void Horizontal_Rule(int horizontal_padding, int vertical_padding) {
     const int height = (vertical_padding - 1) * 2 + 1;
     const int top = rect.y + vertical_padding - 1;
     const Rect this_rect = Rect(rect.x + horizontal_padding, top, width, 1);
-    draw_rect(this_rect, ctx->style->fg);
+    draw_rect(this_rect, 0, ctx->style->fg);
     ui_widget_end(height);
 }
 bool Box(int height) {
     UI_Context* ctx = ui_get_context();
     const Rect rect = ui_widget_begin();
     const Rect this_rect = Rect(rect.x, rect.y, rect.w, height);
-    draw_rect(this_rect, ctx->style->fg);
+    draw_rect(this_rect, 0, ctx->style->fg);
     ui_widget_end(height);
     return false;
 }
@@ -350,15 +352,15 @@ bool Button(const char* label, int height) {
     const Rect this_rect = Rect(rect.x, rect.y, rect.w, height);
     bool ret = false;
     if (uiid_hot == uiid) {
-        draw_rect(this_rect, ctx->style->fg);
+        draw_rect(this_rect, ctx->style->button_roundness, ctx->style->fg);
         if (ui_hot_is_active) {
             ret = true;
             ui_hot_is_active = false;
         }
     }
     else {
-        draw_rect(this_rect, ctx->style->bg);
-        draw_rect_outline(this_rect, ctx->style->fg);
+        draw_rect(this_rect, ctx->style->button_roundness, ctx->style->bg);
+        draw_rect_outline(this_rect, ctx->style->button_roundness, ctx->style->fg);
     }
     ui_selectable_widget_end(height);
     return ret;
@@ -369,15 +371,15 @@ void Checkbox(bool* boolean, int height) {
     const Rect rect = ui_selectable_widget_begin(uiid);
     const Rect this_rect = Rect(rect.x, rect.y, rect.w, height);
     if (uiid_hot == uiid) {
-        draw_rect(this_rect, ctx->style->fg);
+        draw_rect(this_rect, ctx->style->checkbox_roundness, ctx->style->fg);
         if (ui_hot_is_active) {
             *boolean = !*boolean;
             ui_hot_is_active = false;
         }
     }
     else {
-        draw_rect(this_rect, ctx->style->bg);
-        draw_rect_outline(this_rect, ctx->style->fg);
+        draw_rect(this_rect, ctx->style->checkbox_roundness, ctx->style->bg);
+        draw_rect_outline(this_rect, ctx->style->checkbox_roundness, ctx->style->fg);
     }
     
     if (*boolean) {
