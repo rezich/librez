@@ -226,16 +226,19 @@ Have `string_format()` wrap `pd->system->formatString()`, instead of `stbsp_spri
 
 
 ## Memory
-A memory allocation system is provided, using a stack of arena allocators in a shared chunk of memory. Typically, you want at least two memory arenas: one for stuff that is allocated once and will remain allocated for the duration of your game's execution, and another for per-frame temporary allocations. Depending on the complexity of your game, you may wish to include one or more additional arenas between these two: for example, you could have an arena for level-specific memory, that is reset and reused when transitioning from one level to the next.
+A memory allocation system is provided, using a stack of arena allocators in a shared hunk of memory. Typically, you want at least two memory arenas: one for stuff that is allocated once and will remain allocated for the duration of your game's execution, and another for per-frame temporary allocations. Depending on the complexity of your game, you may wish to include one or more additional arenas between these two: for example, you could have an arena for level-specific memory, that is reset and reused when transitioning from one level to the next.
 
-### `MEM_ARENA_CHUNK_SIZE`
+### `MEM_ARENA_HUNK_SIZE`
 The amount of memory, in bytes, that will be set aside for use in the arena stack. Defaults to `1024 * 1024 * 2` (2MB).
 
 ### `void* mem_alloc(size_t bytes)`
-Allocates `bytes` bytes from the current arena.
+Allocates `bytes` from the current arena.
+
+### `void* mem_alloc_temp(size_t bytes)`
+Allocates `bytes` from the end of the arena hunk, unless the current arena is the last one in `Mem_Arena` (not counting `MEM_ARENA_COUNT`), in which case it is equivalent to `mem_alloc()`. Use this instead of `mem_alloc()` if you need temporary allocation while the current arena is anything other than the last one in `Mem_Arena` (not counting `MEM_ARENA_COUNT`).
 
 ### `void mem_reset()`
-Resets all arenas in the arena stack after (and including) the current arena.
+Resets all arenas in the arena stack after (and including) the current arena. Also resets any end-of-hunk allocations made by `mem_alloc_temp()`.
 
 ### `void mem_use(Mem_Arena arena)`
 Set the current active arena to `arena`. Automatically calls `mem_reset()`.

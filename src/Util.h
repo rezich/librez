@@ -38,10 +38,8 @@ void set_white(LCDPattern* pattern) { memcpy(*pattern, PATTERN_WHITE, sizeof(PAT
 void set_alpha(LCDPattern* pattern, float alpha) {
     const uint8_t threshold = (uint8_t)((1.f - alpha) * 64.f);
     for (int row = 0; row < 8; row++) for (int col = 0; col < 8; col++)
-        if (BAYER[row][col] >= threshold)
-            (*pattern)[8 + row] |=  (1 << col); // set
-        else
-            (*pattern)[8 + row] &= ~(1 << col); // clear
+        if (BAYER[row][col] >= threshold) (*pattern)[8 + row] |=  (1 << col); // set
+        else                              (*pattern)[8 + row] &= ~(1 << col); // clear
 }
 
 float ease(float x, float target, float speed) {

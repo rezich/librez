@@ -93,18 +93,12 @@ FORCE_INLINE void target_pop() {
     if (context_faking_debug) { context_faking_debug = false; return; }
 #endif
 #ifdef USING_CUSTOM_RENDERER
-    if (context_stack_count == 0) {
-        _set_draw_buffer_to_backbuffer();
-        return;
-    }
+    if (context_stack_count == 0) { _set_draw_buffer_to_backbuffer(); return; }
 #endif
     pd->graphics->popContext();
 #ifdef USING_CUSTOM_RENDERER
     --context_stack_count;
-    if (context_stack_count == 0) {
-        _set_draw_buffer_to_backbuffer();
-        return;
-    }
+    if (context_stack_count == 0) { _set_draw_buffer_to_backbuffer(); return; }
     _set_draw_buffer_to_end_of_context_stack();
 #endif
     return;
@@ -112,16 +106,17 @@ FORCE_INLINE void target_pop() {
 
 #ifdef USING_CUSTOM_RENDERER
 FORCE_INLINE void _set_point(bool mask, int x, int y, LCDColor color) {
-    if (x < 0 || x >= draw_buffer.width || y < 0 || y >= draw_buffer.height) return;
-    if (clip_rect_active) {
-        if (x < clip_rect.x || x >= clip_rect.x + clip_rect.w || y < clip_rect.y || y >= clip_rect.y + clip_rect.h) return;
-    }
+    if ((x < 0 || x >= draw_buffer.width   ||
+         y < 0 || y >= draw_buffer.height) ||
+        (clip_rect_active && (
+            x < clip_rect.x || x >= clip_rect.x + clip_rect.w ||
+            y < clip_rect.y || y >= clip_rect.y + clip_rect.h))) return;
     uint8_t* row = (mask ? draw_buffer.mask : draw_buffer.data) + ((size_t)y * draw_buffer.rowbytes);
     uint8_t* byte = &row[x / 8];
     if (color > kColorXOR) {
         LCDPattern* pattern = (LCDPattern*)color;
-        if (!((*pattern)[8 + (y % 8)] & (1 << (x % 8)))) return; // skip if masked
-        color = (!((*pattern)[(y % 8)] & (1 << (x % 8)))) ? kColorBlack : kColorWhite;
+        if      (!((*pattern)[8 + (y % 8)] & (1 << (x % 8)))) return; // skip if masked
+        color = (!((*pattern)[    (y % 8)] & (1 << (x % 8)))) ? kColorBlack : kColorWhite;
     }
     const uint8_t pixel = 0x80 >> (x % 8);
     switch ((LCDSolidColor)color) {
@@ -243,13 +238,13 @@ FORCE_INLINE void draw_rect(Rect r, int roundness, LCDColor color) {
     if (roundness == 0) { pd->graphics->fillRect(r.x, r.y, r.w, r.h, color); return; }
     const int roundness2 = roundness * 2;
 
-    const Rect top = Rect(r.x + roundness, r.y, r.w - roundness2, roundness);
-    const Rect mid = Rect(r.x, r.y + roundness, r.w, r.h - roundness2);
-    const Rect bot = Rect(r.x + roundness, r.y + r.h - roundness, r.w - roundness2, roundness);
-    const Rect nw  = Rect(r.x + r.w - roundness2, r.y, roundness2, roundness2);
-    const Rect sw  = Rect(r.x + r.w - roundness2, r.y + r.h - roundness2, roundness2, roundness2);
-    const Rect se  = Rect(r.x, r.y + r.h - roundness2, roundness2, roundness2);
-    const Rect ne  = Rect(r.x, r.y, roundness2, roundness2);
+    const Rect top = Rect(r.x + roundness,        r.y,                    r.w - roundness2, roundness       );
+    const Rect mid = Rect(r.x,                    r.y + roundness,        r.w,              r.h - roundness2);
+    const Rect bot = Rect(r.x + roundness,        r.y + r.h - roundness,  r.w - roundness2, roundness       );
+    const Rect nw  = Rect(r.x + r.w - roundness2, r.y,                    roundness2,       roundness2      );
+    const Rect sw  = Rect(r.x + r.w - roundness2, r.y + r.h - roundness2, roundness2,       roundness2      );
+    const Rect se  = Rect(r.x,                    r.y + r.h - roundness2, roundness2,       roundness2      );
+    const Rect ne  = Rect(r.x,                    r.y,                    roundness2,       roundness2      );
 
     pd->graphics->fillRect(top.x, top.y, top.w, top.h, color);
     pd->graphics->fillRect(mid.x, mid.y, mid.w, mid.h, color);
@@ -286,21 +281,27 @@ void draw_rect_outline(Rect r, int roundness, LCDColor color) {
         return;
     }
     const int roundness2 = roundness * 2;
+    {
+        const int xw1 = r.x + r.w - 1;
+        const int yh1 = r.y + r.h - 1;
+        const int xr  = r.x + roundness;
+        const int yr  = r.y + roundness;
 
-    const Rect nw = Rect(r.x + r.w - roundness2, r.y, roundness2, roundness2);
-    const Rect sw = Rect(r.x + r.w - roundness2, r.y + r.h - roundness2, roundness2, roundness2);
-    const Rect se = Rect(r.x, r.y + r.h - roundness2, roundness2, roundness2);
-    const Rect ne = Rect(r.x, r.y, roundness2, roundness2);
+        _draw_line(Point(xr,  r.y), Point(xw1 - roundness, r.y            ), color);
+        _draw_line(Point(xr,  yh1), Point(xw1 - roundness, yh1            ), color);
+        _draw_line(Point(r.x,  yr), Point(r.x            , yh1 - roundness), color);
+        _draw_line(Point(xw1,  yr), Point(xw1            , yh1 - roundness), color);
+    }{
+        const Rect nw = Rect(r.x + r.w - roundness2, r.y,                    roundness2, roundness2);
+        const Rect sw = Rect(r.x + r.w - roundness2, r.y + r.h - roundness2, roundness2, roundness2);
+        const Rect se = Rect(r.x,                    r.y + r.h - roundness2, roundness2, roundness2);
+        const Rect ne = Rect(r.x,                    r.y,                    roundness2, roundness2);
 
-    _draw_line(Point(r.x + roundness, r.y), Point(r.x + r.w - 1 - roundness, r.y), color);
-    _draw_line(Point(r.x + roundness, r.y + r.h - 1), Point(r.x + r.w - 1 - roundness, r.y + r.h - 1), color);
-    _draw_line(Point(r.x, r.y + roundness), Point(r.x, r.y + r.h - 1 - roundness), color);
-    _draw_line(Point(r.x + r.w - 1, r.y + roundness), Point(r.x + r.w - 1, r.y + r.h - 1 - roundness), color);
-
-    draw_ellipse_outline(nw,   0.f,  90.f, color);
-    draw_ellipse_outline(sw,  90.f, 180.f, color);
-    draw_ellipse_outline(se, 180.f, 270.f, color);
-    draw_ellipse_outline(ne, 270.f, 360.f, color);
+        draw_ellipse_outline(nw,   0.f,  90.f, color);
+        draw_ellipse_outline(sw,  90.f, 180.f, color);
+        draw_ellipse_outline(se, 180.f, 270.f, color);
+        draw_ellipse_outline(ne, 270.f, 360.f, color);
+    }
 }
 
 void draw_text(Point top_left, const char* text, const Typesetting* typesetting) {
