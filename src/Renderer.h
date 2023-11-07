@@ -53,9 +53,9 @@ void _begin_rendering() {
 
 FORCE_INLINE void renderer_mark_updated_rows(int start, int end) { pd->graphics->markUpdatedRows(max(start, 0), min(end, LCD_ROWS - 1)); }
 
-FORCE_INLINE LCDBitmap* new_bitmap(int width, int height, LCDColor bgcolor) { return pd->graphics->newBitmap(width, height, bgcolor); }
+FORCE_INLINE LCDBitmap* new_bitmap(Point dimensions, LCDColor bgcolor) { return pd->graphics->newBitmap(dimensions.x, dimensions.y, bgcolor); }
 FORCE_INLINE void free_bitmap(LCDBitmap* bitmap) { pd->graphics->freeBitmap(bitmap); }
-FORCE_INLINE void draw_bitmap(LCDBitmap * bitmap, int x, int y) { pd->graphics->drawBitmap(bitmap, x, y, kBitmapUnflipped); }
+FORCE_INLINE void draw_bitmap(LCDBitmap * bitmap, Point position) { pd->graphics->drawBitmap(bitmap, position.x, position.y, kBitmapUnflipped); }
 
 FORCE_INLINE void clear(LCDColor color) { pd->graphics->clear(color); }
 
@@ -304,6 +304,41 @@ void draw_rect_outline(Rect r, int roundness, LCDColor color) {
     }
 }
 
+#ifdef USING_CUSTOM_GLYPHS
+#define CUSTOM_GLYPH_NAME_MAX_LENGTH 32
+//      width                      position glyph_size color
+typedef   int (*Custom_Glyph_Proc)(Point,   Point,     LCDColor);
+
+// string -> Custom_Glyph_Proc hashmap
+struct { char* key; Custom_Glyph_Proc value; } *custom_glyphs = NULL;
+
+FORCE_INLINE void custom_glyph_set(const char* name, Custom_Glyph_Proc proc) { shput(custom_glyphs, name, proc); }
+FORCE_INLINE Custom_Glyph_Proc custom_glyph_get(const char* name) { return shget(custom_glyphs, name); }
+
+#endif
+
+void draw_glyph(Point top_left, char c, Point glyph_size, LCDColor color) {
+    RETURN_IF_FAKING_DEBUG_RENDERING;
+    const Glyph* glyph = &THE_FONT[c - FONT_ASCII_OFFSET];
+
+    for (int stroke_index = 0; stroke_index < glyph->stroke_count; ++stroke_index) {
+        const Stroke* stroke = &glyph->strokes[stroke_index];
+        const Point start_point = stroke_point(stroke->start, glyph_size);
+        const Point end_point = stroke_point(stroke->end, glyph_size);
+        draw_line(
+            Point(
+                top_left.x + start_point.x,
+                top_left.y + start_point.y
+            ),
+            Point(
+                top_left.x + end_point.x,
+                top_left.y + end_point.y
+            ),
+            color
+        );
+    }
+}
+
 void draw_text(Point top_left, const char* text, const Typesetting* typesetting) {
     RETURN_IF_FAKING_DEBUG_RENDERING;
     if (!typesetting) typesetting = &DEFAULT_TYPESETTING;
@@ -312,7 +347,7 @@ void draw_text(Point top_left, const char* text, const Typesetting* typesetting)
     //Point unit_scale = Point((glyph_size.x - 1) / 2, (glyph_size.y - 1) / 2);
     Point cursor = Point(top_left.x, top_left.y);
 
-    for (int text_index = 0; text[text_index] != 0; ++text_index) {
+    for (size_t text_index = 0; text[text_index] != 0; ++text_index) {
         if (text[text_index] == '\n') {
             cursor = Point(top_left.x, cursor.y + glyph_size.y + typesetting->line_spacing);
             continue;
@@ -324,27 +359,34 @@ void draw_text(Point top_left, const char* text, const Typesetting* typesetting)
             -typesetting->glyph_shiver + (rand() % (typesetting->glyph_shiver * 2))
         );
 
-        const Glyph* glyph = &THE_FONT[text[text_index] - FONT_ASCII_OFFSET];
-        int stride = glyph_size.x;
-        
-        for (int stroke_index = 0; stroke_index < glyph->stroke_count; ++stroke_index) {
-            const Stroke* stroke = &glyph->strokes[stroke_index];
-            const Point start_point = stroke_point(stroke->start, glyph_size);
-            const Point end_point   = stroke_point(stroke->end,   glyph_size);
-            draw_line(
-                Point(
-                    cursor.x + start_point.x + shiver_offset.x,
-                    cursor.y + start_point.y + shiver_offset.y
-                ),
-                Point(
-                    cursor.x + end_point.x   + shiver_offset.x,
-                    cursor.y + end_point.y   + shiver_offset.y
-                ),
-                typesetting->color
-            );
-        }
+        int stride = 0;
 
-        cursor.x += stride + typesetting->glyph_spacing;
+        bool markup_parsed = false;
+#ifdef USING_CUSTOM_GLYPHS
+        if (text[text_index] == '[' && text[text_index + 1] == '[') {
+            const char* markup_begin = &text[text_index + 2];
+            const char* markup_end = strstr(markup_begin, "]]");
+            if (markup_end) {
+                char name[CUSTOM_GLYPH_NAME_MAX_LENGTH] = { 0 };
+                size_t length = markup_end - markup_begin;
+                assert(length < CUSTOM_GLYPH_NAME_MAX_LENGTH);
+                strncpy(name, markup_begin, length);
+
+                Custom_Glyph_Proc proc = custom_glyph_get(name);
+                if (proc) stride = proc(cursor, glyph_size, typesetting->color);
+
+                text_index += length + 3;
+                markup_parsed = true;
+            }
+        }
+#endif
+
+        if (!markup_parsed) {
+            stride = glyph_size.x;
+            const Point position = { cursor.x + shiver_offset.x, cursor.y + shiver_offset.y };
+            draw_glyph(position, text[text_index], glyph_size, typesetting->color);
+        }
+        cursor.x += stride + (stride != 0 ? typesetting->glyph_spacing : 0);
     }
 }
 

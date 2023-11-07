@@ -224,6 +224,9 @@ The size of the buffer used for calculating the ETA of the suspend/resume catch-
 ### `USING_PD_FORMAT_STRING`
 Have `string_format()` wrap `pd->system->formatString()`, instead of `stbsp_sprintf()` (which it does by default).
 
+### `USING_CUSTOM_GLYPHS`
+Permits the use of "custom glyphs" in text rendering.
+
 
 ## Memory
 A memory allocation system is provided, using a stack of arena allocators in a shared hunk of memory. Typically, you want at least two memory arenas: one for stuff that is allocated once and will remain allocated for the duration of your game's execution, and another for per-frame temporary allocations. Depending on the complexity of your game, you may wish to include one or more additional arenas between these two: for example, you could have an arena for level-specific memory, that is reset and reused when transitioning from one level to the next.

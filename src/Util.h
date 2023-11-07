@@ -1,21 +1,5 @@
 #pragma once
 
-#define STB_SPRINTF_IMPLEMENTATION
-#ifdef _WINDLL
-#pragma warning( push )
-#pragma warning( disable : 26451 )
-#endif
-#include "../lib/stb_printf.h"
-#ifdef _WINDLL
-#pragma warning( pop )
-#endif
-#ifndef _WINDLL
-//#pragma GCC diagnostic ignored "-Wformat-extra-args"
-//#pragma GCC diagnostic ignored "-Wformat="
-
-//#pragma GCC diagnostic ignored "-Wdouble-promotion"
-#endif
-
 #undef max
 #undef min
 #define max(a,b) (((a) > (b)) ? (a) : (b))
@@ -37,9 +21,21 @@ void set_black(LCDPattern* pattern) { memcpy(*pattern, PATTERN_BLACK, sizeof(PAT
 void set_white(LCDPattern* pattern) { memcpy(*pattern, PATTERN_WHITE, sizeof(PATTERN_WHITE)); }
 void set_alpha(LCDPattern* pattern, float alpha) {
     const uint8_t threshold = (uint8_t)((1.f - alpha) * 64.f);
-    for (int row = 0; row < 8; row++) for (int col = 0; col < 8; col++)
+    for (int row = 0; row < 8; ++row) for (int col = 0; col < 8; ++col)
         if (BAYER[row][col] >= threshold) (*pattern)[8 + row] |=  (1 << col); // set
         else                              (*pattern)[8 + row] &= ~(1 << col); // clear
+}
+bool invert(LCDColor* color) {
+    if (*color == kColorBlack) { *color = kColorWhite; return true; }
+    if (*color == kColorWhite) { *color = kColorBlack; return true; }
+    if (*color > kColorXOR) { for (int i = 0; i < 8; ++i) color[i] = ~color[i]; return true; }
+    return false;
+}
+bool patternize(LCDColor color, LCDPattern* pattern) {
+    if (color == kColorBlack) { set_black(pattern); set_alpha(pattern, 1.f); return true; }
+    if (color == kColorWhite) { set_white(pattern); set_alpha(pattern, 1.f); return true; }
+    if (color > kColorXOR) { memcpy(*pattern, *((LCDPattern*)color), sizeof(LCDPattern)); set_alpha(pattern, 1.f); return true; }
+    return false;
 }
 
 float ease(float x, float target, float speed) {
@@ -49,6 +45,10 @@ float ease(float x, float target, float speed) {
 
 float accelerated_change(float x) {
     return 1.f / (0.2f + powf(1.04f, -fabsf(x) + 20.f));
+}
+
+float get_temporally_cycling_value(float scale) {
+    return fmaxf(fminf(cosf((float)pd->system->getCurrentTimeMilliseconds() / 1000.f * scale) * .6f + .5f, 1.0f), 0.f);
 }
 
 typedef unsigned long Hash;

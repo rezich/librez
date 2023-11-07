@@ -1,5 +1,10 @@
 #pragma once
 
+//TODO: remove this, probably
+#ifdef _WINDLL
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #include "pd_api.h"
 
 #include <stdarg.h>
@@ -13,13 +18,54 @@
 #include <float.h>
 #include <math.h>
 
+
+PlaydateAPI* pd = NULL;
+
+
 #ifdef _WINDLL
 #define FORCE_INLINE __forceinline
 #else
 #define FORCE_INLINE __attribute__((always_inline)) inline
 #endif
 
-PlaydateAPI* pd = NULL;
+
+#define STB_SPRINTF_IMPLEMENTATION
+#ifdef _WINDLL
+#pragma warning( push )
+#pragma warning( disable : 26451 )
+#endif
+#include "lib/stb_printf.h"
+#ifdef _WINDLL
+#pragma warning( pop )
+#endif
+#ifndef _WINDLL
+//#pragma GCC diagnostic ignored "-Wformat-extra-args"
+//#pragma GCC diagnostic ignored "-Wformat="
+
+//#pragma GCC diagnostic ignored "-Wdouble-promotion"
+#endif
+
+
+
+FORCE_INLINE void* realloc_proxy(void* ptr, size_t new_size) { return pd->system->realloc(ptr, new_size); }
+FORCE_INLINE void  free_proxy(void* ptr) { pd->system->realloc(ptr, 0); }
+
+#define STBDS_REALLOC(context, ptr, size) realloc_proxy(ptr, size)
+#define STBDS_FREE(context, ptr) free_proxy(ptr)
+#define STB_DS_IMPLEMENTATION
+#ifdef _WINDLL
+#pragma warning( push )
+#pragma warning( disable : 26451 )
+#pragma warning( disable : 6297  )
+#pragma warning( disable : 6386  )
+#endif
+#include "lib/stb_ds.h"
+#ifdef _WINDLL
+#pragma warning( pop )
+#endif
+
+
+
 #include "src/System.h"
 #include "src/Memory.h"
 #include "src/Util.h"
@@ -255,7 +301,12 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
         if (!fpsfont) pd->system->error("%s:%i Couldn't load font %s: %s", __FILE__, __LINE__, fpsfontpath, err);
 #endif
         pd->system->setUpdateCallback(_update, NULL);
-        srand(pd->system->getSecondsSinceEpoch(NULL));
+        unsigned int seed = pd->system->getSecondsSinceEpoch(NULL);
+        srand(seed);
+        stbds_rand_seed(seed);
+#ifdef USING_CUSTOM_GLYPHS
+        shdefault(custom_glyphs, NULL);
+#endif
 #ifdef USING_SUSPEND_RESUME
         suspend_resume.last_second_simulated_or_queued = 0;
         suspend_resume.frames_left_to_simulate         = 0;

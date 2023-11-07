@@ -11,6 +11,7 @@ void swap_points(Point* a, Point* b) {
     *b = temp;
 }
 
+const Point LCD_CENTER = { LCD_COLUMNS / 2 - 1, LCD_ROWS / 2 - 1 };
 
 #define Rect(x, y, w, h) (Rect){(Point){(x), (y)}, (Point){(w), (h)}}
 typedef union {
