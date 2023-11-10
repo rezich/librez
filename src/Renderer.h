@@ -17,6 +17,7 @@ typedef struct {
 
 uint8_t* backbuffer;
 Draw_Buffer draw_buffer;
+LCDBitmap* debug_bitmap = NULL;
 
 #define CONTEXT_STACK_SIZE 100
 LCDBitmap* context_stack[CONTEXT_STACK_SIZE];
@@ -44,8 +45,11 @@ void _begin_rendering() {
     backbuffer = pd->graphics->getFrame();
     context_stack_count = 0;
     clip_rect_active = false;
-#ifndef TARGET_SIMULATOR
+#ifdef TARGET_SIMULATOR
+    debug_bitmap = pd->graphics->getDebugBitmap();
+#else
     context_faking_debug = false;
+    
 #endif
     _set_draw_buffer_to_backbuffer();
 }
@@ -54,8 +58,12 @@ void _begin_rendering() {
 FORCE_INLINE void renderer_mark_updated_rows(int start, int end) { pd->graphics->markUpdatedRows(max(start, 0), min(end, LCD_ROWS - 1)); }
 
 FORCE_INLINE LCDBitmap* new_bitmap(Point dimensions, LCDColor bgcolor) { return pd->graphics->newBitmap(dimensions.x, dimensions.y, bgcolor); }
+FORCE_INLINE LCDBitmap* copy_bitmap(LCDBitmap* bitmap) { return pd->graphics->copyBitmap(bitmap); }
 FORCE_INLINE void free_bitmap(LCDBitmap* bitmap) { pd->graphics->freeBitmap(bitmap); }
-FORCE_INLINE void draw_bitmap(LCDBitmap * bitmap, Point position) { pd->graphics->drawBitmap(bitmap, position.x, position.y, kBitmapUnflipped); }
+FORCE_INLINE void draw_bitmap(LCDBitmap* bitmap, Point position) { pd->graphics->drawBitmap(bitmap, position.x, position.y, kBitmapUnflipped); }
+FORCE_INLINE void draw_bitmap_scaled(LCDBitmap* bitmap, Point position, Vec2 scale) { pd->graphics->drawScaledBitmap(bitmap, position.x, position.y, scale.x, scale.y); }
+FORCE_INLINE void set_bitmap_mask(LCDBitmap* bitmap, LCDBitmap* mask) { pd->graphics->setBitmapMask(bitmap, mask); }
+FORCE_INLINE LCDBitmap* get_bitmap_mask(LCDBitmap* bitmap) { return pd->graphics->getBitmapMask(bitmap); }
 
 FORCE_INLINE void clear(LCDColor color) { pd->graphics->clear(color); }
 
@@ -83,7 +91,7 @@ FORCE_INLINE void target_push(LCDBitmap* target) {
 }
 FORCE_INLINE void target_push_debug() {
 #ifdef TARGET_SIMULATOR
-    target_push(pd->graphics->getDebugBitmap());
+    target_push(debug_bitmap);
 #else
     context_faking_debug = true;
 #endif
@@ -130,6 +138,7 @@ FORCE_INLINE void _set_point(bool mask, int x, int y, LCDColor color) {
 FORCE_INLINE void _draw_point(int x, int y, LCDColor color) {
     if (color == kColorClear) {
         if (draw_buffer.mask) _set_point(true, x, y, kColorBlack);
+        else assert(false);
         return;
     }
     if (draw_buffer.mask) _set_point(true, x, y, kColorWhite);

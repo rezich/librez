@@ -16,6 +16,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <float.h>
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 
@@ -315,6 +316,9 @@ int eventHandler(PlaydateAPI* playdate, PDSystemEvent event, uint32_t arg) {
 #ifdef USING_AUTOSAVE
         init(autoload());
 #else
+#ifdef USING_CUSTOM_RENDERER
+        _begin_rendering();
+#endif
         init();
 #endif
         break;

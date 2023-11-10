@@ -2,6 +2,15 @@ This is a sort of library or framework or whatever to facilitate the creation of
 
 ***Note that this only works with Visual Studio for now, as that's what I'm using, and I don't know what `#define`s I should look for for MacOS and Linux.***
 
+# TODO
+
+- glyph cache
+- clear mask
+- draw text in a Rect
+- complete text rendering overhaul
+- triangle rasterization (ugh)
+
+
 # Examples
 
 ## Basic
