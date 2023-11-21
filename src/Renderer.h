@@ -8,9 +8,9 @@
 
 #ifdef USING_CUSTOM_RENDERER
 typedef struct {
-    int width;
-    int height;
-    int rowbytes;
+    int      width;
+    int      height;
+    int      rowbytes;
     uint8_t* mask;
     uint8_t* data;
 } Draw_Buffer;

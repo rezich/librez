@@ -113,3 +113,10 @@ void timespan_parse(Timespan timespan, unsigned int* days, unsigned int* hours, 
     if (milliseconds) *milliseconds = timespan.ms;
 }
 
+
+#ifdef USING_TIMESCALE
+float _timescale = 1.f;
+FORCE_INLINE void timescale_set(float ts) { _timescale = ts; }
+#define TSDT _timescale * dt
+#endif
+

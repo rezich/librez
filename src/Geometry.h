@@ -13,11 +13,12 @@ typedef struct {
     int x;
     int y;
 } Point;
-void swap_points(Point* a, Point* b) {
+FORCE_INLINE void swap_points(Point* a, Point* b) {
     Point temp = *a;
     *a = *b;
     *b = temp;
 }
+FORCE_INLINE bool points_are_equal(Point a, Point b) { return a.x == b.x && a.y == b.y; }
 
 const Point LCD_CENTER = { LCD_COLUMNS / 2 - 1, LCD_ROWS / 2 - 1 };
 
@@ -57,6 +58,7 @@ typedef struct {
     float x;
     float y;
 } Vec2;
+FORCE_INLINE bool  vec2s_are_equal(Vec2 a, Vec2 b) { return a.x == b.x && a.y == b.y; }
 FORCE_INLINE void  vec2_multiply(Vec2* v, float scalar) {
     v->x *= scalar;
     v->y *= scalar;
@@ -64,8 +66,11 @@ FORCE_INLINE void  vec2_multiply(Vec2* v, float scalar) {
 FORCE_INLINE float vec2_length_squared(Vec2 v) { return v.x * v.x + v.y * v.y; }
 FORCE_INLINE float vec2_length(Vec2 v) { return sqrtf(vec2_length_squared(v)); }
 FORCE_INLINE Point vec2_to_point(Vec2 v) { return Point((int)roundf(v.x), (int)roundf(v.y)); }
-void  vec2_normalize(Vec2* v) {
+FORCE_INLINE Vec2  point_to_vec2(Point p) { return Vec2((float)p.x, (float)p.y); }
+void vec2_normalize(Vec2* v) {
     const float length = vec2_length(*v);
     if (length <= 0.f) *v = Vec2(0, 0);
     else vec2_multiply(v, 1.f / length);
 }
+FORCE_INLINE Vec2 ease_vec2(Vec2 p, Vec2 target, float speed) { return (Vec2) { ease(p.x, target.x, speed), ease(p.y, target.y, speed) }; }
+FORCE_INLINE Vec2 ease_vec2_to_point(Vec2 p, Point target, float speed) { return (Vec2) { ease(p.x, (float)target.x, speed), ease(p.y, (float)target.y, speed) }; }
