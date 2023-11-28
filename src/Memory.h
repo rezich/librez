@@ -17,9 +17,9 @@ void* mem_alloc(size_t bytes) {
 }
 void* mem_alloc_temp(size_t bytes) {
     if (_mem_arena == MEM_ARENA_COUNT - 1) return mem_alloc(bytes);
-    assert(MEM_ARENA_COUNT - 1 - _mem_temp_begin - bytes > _mem_end[_mem_arena]);
+    assert(MEM_ARENA_HUNK_SIZE - 1 - (int)_mem_temp_begin - (int)bytes > (int)_mem_end[_mem_arena]);
     _mem_temp_begin += bytes;
-    return _mem_arena_hunk + MEM_ARENA_COUNT - 1 - _mem_temp_begin;
+    return _mem_arena_hunk + MEM_ARENA_HUNK_SIZE - 1 - _mem_temp_begin;
 }
 void mem_reset() {
     _mem_temp_begin = 0;

@@ -28,18 +28,19 @@ void set_alpha(LCDPattern* pattern, float alpha) {
 bool invert(LCDColor* color) {
     if (*color == kColorBlack) { *color = kColorWhite; return true; }
     if (*color == kColorWhite) { *color = kColorBlack; return true; }
-    if (*color > kColorXOR) { for (int i = 0; i < 8; ++i) color[i] = ~color[i]; return true; }
+    if (*color >  kColorXOR)   { for (int i = 0; i < 8; ++i) color[i] = ~color[i]; return true; }
     return false;
 }
 bool patternize(LCDColor color, LCDPattern* pattern) {
     if (color == kColorBlack) { set_black(pattern); set_alpha(pattern, 1.f); return true; }
     if (color == kColorWhite) { set_white(pattern); set_alpha(pattern, 1.f); return true; }
-    if (color > kColorXOR) { memcpy(*pattern, *((LCDPattern*)color), sizeof(LCDPattern)); set_alpha(pattern, 1.f); return true; }
+    if (color >  kColorXOR)   { memcpy(*pattern, *((LCDPattern*)color), sizeof(LCDPattern)); set_alpha(pattern, 1.f); return true; }
     return false;
 }
 
 float ease(float x, float target, float speed) {
-    if (fabsf(x - target) <= 0.01f) return target;
+    const float EPSILON = 0.01f;
+    if (fabsf(x - target) <= EPSILON) return target;
     return x + (target - x) * speed;
 }
 
@@ -62,7 +63,7 @@ Hash hash_int(int n) {
     Hash x = (Hash)n;
     x = ((x >> 16) ^ x) * 0x45d9f3b;
     x = ((x >> 16) ^ x) * 0x45d9f3b;
-    x = (x >> 16) ^ x;
+    x =  (x >> 16) ^ x;
     return x;
 }
 Hash hash_combine(Hash a, Hash b) {

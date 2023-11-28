@@ -1,25 +1,9 @@
 #pragma once
 
 #ifndef USE_PD_STRING_FORMAT
-#ifdef _WINDLL
 #define format_string(...) stbsp_sprintf(__VA_ARGS__)
 #else
-#define format_string(...) \
-    _Pragma("GCC diagnostic push") \
-    _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"") \
-    stbsp_sprintf(__VA_ARGS__); \
-    _Pragma("GCC diagnostic pop")
-#endif
-#else
-#ifdef _WINDLL
 #define format_string(...) pd->system->formatString(__VA_ARGS__)
-#else
-#define format_string(...) \
-    _Pragma("GCC diagnostic push") \
-    _Pragma("GCC diagnostic ignored \"-Wdouble-promotion\"") \
-    pd->system->formatString(__VA_ARGS__); \
-    _Pragma("GCC diagnostic pop")
-#endif
 #endif
 
 #ifdef _WINDLL
