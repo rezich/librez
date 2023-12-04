@@ -5,6 +5,12 @@ typedef enum {
     TS_PROPORTIONAL
 } Text_Style;
 typedef enum {
+    TC_AS_WRITTEN,
+    TC_LOWER,
+    TC_UPPER
+    // TC_SMALL_CAPS //TODO
+} Text_Casing;
+typedef enum {
     TA_LEFT,
     TA_CENTER,
     TA_RIGHT
@@ -17,6 +23,7 @@ typedef struct {
     LCDColor color;
     Text_Alignment alignment;
     Text_Style style;
+    Text_Casing casing;
     int proportional_space_width;
 } Typesetting;
 const Typesetting DEFAULT_TYPESETTING = {
@@ -27,6 +34,7 @@ const Typesetting DEFAULT_TYPESETTING = {
     .color = kColorBlack,
     .alignment = TA_LEFT,
     .style = TS_PROPORTIONAL,
+    .casing = TC_AS_WRITTEN,
     .proportional_space_width = 1
 };
 typedef enum {

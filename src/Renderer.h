@@ -356,7 +356,7 @@ void draw_text(Point top_left, const char* text, const Typesetting* typesetting)
     //Point unit_scale = Point((glyph_size.x - 1) / 2, (glyph_size.y - 1) / 2);
     Point cursor = Point(top_left.x, top_left.y);
 
-    for (size_t text_index = 0; text[text_index] != 0; ++text_index) {
+    for (size_t text_index = 0; text[text_index] != '\0'; ++text_index) {
         if (text[text_index] == '\n') {
             cursor = Point(top_left.x, cursor.y + glyph_size.y + typesetting->line_spacing);
             continue;
@@ -393,7 +393,13 @@ void draw_text(Point top_left, const char* text, const Typesetting* typesetting)
         if (!markup_parsed) {
             stride = glyph_size.x;
             const Point position = { cursor.x + shiver_offset.x, cursor.y + shiver_offset.y };
-            draw_glyph(position, text[text_index], glyph_size, typesetting->color);
+            char character = text[text_index];
+            switch (typesetting->casing) {
+            case TC_AS_WRITTEN: break;
+            case TC_LOWER: if (character >= 'A' && character <= 'Z') character += 32; break;
+            case TC_UPPER: if (character >= 'a' && character <= 'z') character -= 32; break;
+            }
+            draw_glyph(position, character, glyph_size, typesetting->color);
         }
         cursor.x += stride + (stride != 0 ? typesetting->glyph_spacing : 0);
     }
