@@ -191,3 +191,5 @@ FORCE_INLINE void timescale_set(float ts) { _timescale = ts; }
 #define TSDT _timescale * dt
 #endif
 
+#define REINTERPRET_CAST(type, variable) (*(type*)((void*)(&variable)))
+//                                        *(float*)((void*)&bpm)
